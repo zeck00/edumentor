@@ -1,5 +1,6 @@
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:edumentor/asset-class/fonts.dart';
+import 'package:edumentor/widgets/newswidget.dart';
 import 'package:flutter/material.dart';
 import 'package:edumentor/asset-class/size_config.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,7 +11,7 @@ class HomePage extends StatelessWidget {
     initSizeConfig(context);
 
     return Scaffold(
-      backgroundColor: MyColors.white,
+      backgroundColor: AppColors.white,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(
@@ -29,24 +30,19 @@ class HomePage extends StatelessWidget {
                     children: [
                       SvgPicture.asset(
                         'assets/logo.svg',
-                        height: propHeight(40),
-                      ),
-                      Text(
-                        "EduMentor",
-                        style: FontStyles.hometitleg, // Green home title
+                        height: propHeight(55),
                       ),
                     ],
                   ),
                   InkWell(
-                    onTap: () {
-                      // Handle profile tap
-                    },
-                    child: Icon(
-                      Icons.account_circle_outlined,
-                      color: MyColors.black,
-                      size: propWidth(30),
-                    ),
-                  ),
+                      onTap: () {
+                        // Handle profile tap
+                      },
+                      child: CircleAvatar(
+                        radius: propWidth(22.5),
+                        backgroundColor: AppColors.black,
+                        child: SvgPicture.asset('assets/profile.svg'),
+                      )),
                 ],
               ),
               SizedBox(height: propHeight(20)),
@@ -60,34 +56,46 @@ class HomePage extends StatelessWidget {
 
               // News Grid
               SizedBox(
-                height: propHeight(150), // Height for the news cards
+                height: propHeight(230),
                 child: ListView(
                   scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
                   children: [
-                    _newsCard('assets/campus.png', 'AI-Powered Study...'),
-                    _newsCard('assets/class.png', 'Classrooms Evolved...'),
-                    _newsCard('assets/power.png', 'Classrooms Evolved...'),
+                    NewsCard(
+                      imagePath: "assets/campus.png",
+                      title: "AI-Powered Study...",
+                    ),
+                    NewsCard(
+                      imagePath: 'assets/class.png',
+                      title: 'Classrooms Evolved...',
+                    ),
+                    NewsCard(
+                      imagePath: 'assets/power.png',
+                      title: 'Classrooms Evolved...',
+                    ),
+                    NewsCard(
+                      imagePath: 'assets/power.png',
+                      title: 'Classrooms Evolved...',
+                    ),
                   ],
                 ),
               ),
-              SizedBox(height: propHeight(20)),
-
+              SizedBox(height: propHeight(15)),
               // EduMentor AI Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text("EduMentor AI", style: FontStyles.hometitle),
-                  Icon(
-                    Icons.arrow_forward,
-                    color: MyColors.green,
-                    size: propWidth(20),
+                  SvgPicture.asset(
+                    'assets/g-next.svg',
+                    height: propHeight(30),
                   ),
                 ],
               ),
               SizedBox(height: propHeight(10)),
 
               // EduMentor AI Card
-              _customCard('assets/images/ai_image.png'),
+              _customCard('assets/EduMentor.png'),
               SizedBox(height: propHeight(20)),
 
               // Course Material Section
@@ -95,10 +103,9 @@ class HomePage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text("Course Material", style: FontStyles.hometitle),
-                  Icon(
-                    Icons.arrow_forward,
-                    color: MyColors.black,
-                    size: propWidth(20),
+                  SvgPicture.asset(
+                    'assets/b-next.svg',
+                    height: propHeight(30),
                   ),
                 ],
               ),
@@ -106,7 +113,7 @@ class HomePage extends StatelessWidget {
 
               // Course Material Card
               _customCard('assets/CourseMaterial.png'),
-              SizedBox(height: propHeight(20)),
+              SizedBox(height: propHeight(30)),
 
               // Bottom Buttons (Settings & About Us)
               Row(
@@ -123,40 +130,13 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Reusable method for news card
-  Widget _newsCard(String imagePath, String title) {
-    return Container(
-      width: propWidth(120),
-      margin: EdgeInsets.only(right: propWidth(10)),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(propWidth(10)),
-        image: DecorationImage(
-          image: AssetImage(imagePath),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          padding: EdgeInsets.all(propWidth(8)),
-          color: Colors.black.withOpacity(0.5),
-          child: Text(
-            title,
-            style: FontStyles.newstitle, // News title style
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    );
-  }
-
   // Reusable method for custom cards (EduMentor AI & Course Material)
   Widget _customCard(String imagePath) {
     return Container(
       width: double.infinity,
-      height: propHeight(100),
+      height: propHeight(135),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(propWidth(20)),
+        borderRadius: BorderRadius.circular(propWidth(25)),
         image: DecorationImage(
           image: AssetImage(imagePath),
           fit: BoxFit.cover,
@@ -167,26 +147,31 @@ class HomePage extends StatelessWidget {
 
   // Reusable method for bottom buttons (Settings & About Us)
   Widget _bottomButton(String label) {
-    return ElevatedButton.icon(
-      onPressed: () {
+    return GestureDetector(
+      onTap: () {
         // Handle button tap
       },
-      icon:
-          Icon(Icons.arrow_forward, size: propWidth(20), color: MyColors.black),
-      label: Text(
-        label,
-        style: FontStyles.button1, // Button style
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: MyColors.white,
-        shadowColor: MyColors.black.withAlpha(50),
-        elevation: 5,
-        padding: EdgeInsets.symmetric(
-          horizontal: propWidth(30),
-          vertical: propHeight(15),
+      child: Container(
+        width: propWidth(175), // Set the width to 175 propWidth
+        height: propHeight(55), // Set the height to 52 propHeight
+        decoration: BoxDecoration(
+          color: AppColors.gray, // Set the background color to gray
+          borderRadius: BorderRadius.circular(propWidth(25)), // Rounded edges
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(propWidth(20)),
+        child: Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceEvenly, // Space text and icon
+          children: [
+            Text(
+              label,
+              style: FontStyles.button1
+                  .copyWith(color: AppColors.black), // Button text style
+            ),
+            SvgPicture.asset(
+              'assets/b-next.svg', // SVG icon as shown in the example
+              height: propHeight(30), // Icon height adjusted to 30 propHeight
+            ),
+          ],
         ),
       ),
     );

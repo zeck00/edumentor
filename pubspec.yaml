@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.10+1  # SVG support for Flutter
+  path_provider: ^2.1.4
+  rename: ^3.0.2
 
 dev_dependencies:
   flutter_test:
