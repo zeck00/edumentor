@@ -10,8 +10,8 @@ class NewsCard extends StatelessWidget {
   const NewsCard({
     required this.imagePath,
     required this.title,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

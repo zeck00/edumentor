@@ -39,6 +39,9 @@ class GPTQuestionGenerator {
         Map<String, dynamic> data = json.decode(response.body);
         String content = data['choices'][0]['message']['content'];
 
+        // Print the full raw GPT response to debug
+        print("GPT response content:\n$content");
+
         // Parse the content and extract the question, choices, points, and correct answer
         return _parseGeneratedQuestion(content);
       } else {
@@ -46,74 +49,106 @@ class GPTQuestionGenerator {
       }
     } catch (e) {
       print('Error generating question: $e');
-      throw e;
+      rethrow;
     }
   }
 
   // Create a dynamic prompt for the OpenAI API
   String createDynamicPrompt(int difficulty, int score, int numAnswered) {
     return '''
-    Generate a multiple-choice question based on the following criteria:
-    - Current difficulty level: $difficulty
-    - User's current score: $score
-    - Number of questions answered: $numAnswered
-    - Four multiple-choice answers.
-    - Each answer should have a point value based on its closeness to the correct answer (1, 0.75, 0.5, 0.25).
-    - Indicate the index of the correct answer (0-based index).
-    - Provide a short help explanation for the correct answer.
+    Generate a multiple-choice question related to health sciences and nutrition based on the following chapters:
+    1. Basic Nutritional Concepts (macronutrients, micronutrients, and energy balance)
+    2. Digestion and Absorption (nutrient absorption processes, GI tract roles)
+    3. Carbohydrates (types of carbohydrates, fiber, digestion)
+    4. Lipids (fatty acids, cholesterol, health implications)
+    5. Proteins (essential and non-essential amino acids, protein digestion)
+    6. Vitamins and Minerals (water- and fat-soluble vitamins, deficiency diseases)
+    7. Energy Metabolism (energy requirements, metabolism regulation)
+    8. Weight Management (obesity, energy expenditure, diet strategies)
+    9. Physical Fitness (exercise benefits, guidelines, physical activity)
+    10. Diabetes Mellitus (types, symptoms, treatment, glycemic control)
+    11. Cardiovascular Diseases (hypertension, heart disease risk factors, DASH diet)
+    12. Overweight and Obesity (BMI, types of obesity, treatment strategies)
+    13. Eating Disorders (anorexia, bulimia, pica, binge eating)
+    14. Water and Fluid Balance (hydration, electrolyte balance)
+    15. Nutrition in Special Populations (pregnancy, elderly, athletes).
+
+    Include four multiple-choice answers, with each answer being scored based on its closeness to the correct answer (1, 0.75, 0.5, 0.25). 
+    Indicate the index of the correct answer (0-based index) and provide a short help explanation for the correct answer.
+
     Example:
-    Question: What is a primary source of Vitamin C?
-    Choices: Oranges, Apples, Oranges & Strawberries, Potatoes
-    Points: 1, 0.25, 0.75, 0.5
-    Correct: 0
-    Help: Think about common fruits known for high vitamin C content.
-    ''';
+    Question: Which vitamin is essential for calcium absorption in the body?
+    Choices: Vitamin A, Vitamin D, Vitamin C, Vitamin B12
+    Points: 0.25, 1, 0.5, 0.25
+    Correct: 1
+    Help: Vitamin D helps the body absorb calcium, which is crucial for bone health.
+  ''';
   }
 
   // Parses the response content and formats it into a structured Map
   Map<String, dynamic> _parseGeneratedQuestion(String content) {
-    final questionRegex = RegExp(r'Question:\s*(.*)');
-    final choicesRegex = RegExp(r'Choices:\s*([\s\S]*?)\nPoints:');
-    final pointsRegex = RegExp(r'Points:\s*([\s\S]*?)\n');
-    final correctRegex = RegExp(r'Correct:\s*(\d+)');
-    final helpRegex = RegExp(r'Help:\s*(.*)');
+    try {
+      final questionRegex = RegExp(r'Question:\s*(.*)');
+      final choicesRegex = RegExp(r'Choices:\s*([\s\S]*?)\nPoints:');
+      final pointsRegex = RegExp(r'Points:\s*([\s\S]*?)\n');
+      final correctRegex = RegExp(r'Correct:\s*(\d+)');
+      final helpRegex = RegExp(r'Help:\s*(.*)');
 
-    final questionMatch = questionRegex.firstMatch(content);
-    final choicesMatch = choicesRegex.firstMatch(content);
-    final pointsMatch = pointsRegex.firstMatch(content);
-    final correctMatch = correctRegex.firstMatch(content);
-    final helpMatch = helpRegex.firstMatch(content);
+      // Extract the main parts of the question
+      final questionMatch = questionRegex.firstMatch(content);
+      final choicesMatch = choicesRegex.firstMatch(content);
+      final pointsMatch = pointsRegex.firstMatch(content);
+      final correctMatch = correctRegex.firstMatch(content);
+      final helpMatch = helpRegex.firstMatch(content);
 
-    if (questionMatch != null &&
-        choicesMatch != null &&
-        pointsMatch != null &&
-        correctMatch != null &&
-        helpMatch != null) {
+      // Validate that we found everything
+      if (questionMatch == null ||
+          choicesMatch == null ||
+          pointsMatch == null ||
+          correctMatch == null ||
+          helpMatch == null) {
+        throw Exception(
+            'Failed to parse: missing key elements in the GPT response.');
+      }
+
+      // Parse the question and help text
       String question = questionMatch.group(1)!.trim();
       String help = helpMatch.group(1)!.trim();
 
-      // Split choices by number and period
+      // LOG: Show raw choices content before parsing
+      print("Raw choices content: ${choicesMatch.group(1)}");
+
+      // Parse the choices
       List<String> choices = choicesMatch
           .group(1)!
-          .split(RegExp(r'\d+\.\s*'))
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
+          .split(RegExp(
+              r'\n|^\d+\.\s*|,\s*')) // Split by newline, numbered lists, or commas
+          .map((choice) => choice.trim())
+          .where((choice) => choice.isNotEmpty) // Remove empty entries
           .toList();
 
-      // Split points by commas or spaces
+      // LOG: Show parsed choices to ensure they are separated correctly
+      print("Parsed choices: $choices");
+
+      // Parse the points
       List<double> points = pointsMatch
           .group(1)!
-          .split(RegExp(r'[\s,]+'))
-          .map((e) => double.tryParse(e.trim()) ?? 0.0)
+          .split(RegExp(r'[\s,]+')) // Split by spaces or commas
+          .map((point) =>
+              double.tryParse(point.trim()) ??
+              0.0) // Ensure all points are converted to double
           .toList();
 
+      // Parse the correct answer index
       int correct = int.tryParse(correctMatch.group(1)!.trim()) ?? 0;
 
-      // Ensure points list matches the choices list length
-      if (points.length != choices.length) {
-        throw Exception('Mismatch between choices and points length');
+      // Ensure the choices and points lengths match EXACTLY
+      if (choices.length != points.length) {
+        throw Exception(
+            'Mismatch between number of choices and points! Choices: ${choices.length}, Points: ${points.length}');
       }
 
+      // Return the structured data
       return {
         'question': question,
         'choices': choices,
@@ -121,8 +156,9 @@ class GPTQuestionGenerator {
         'correct': correct,
         'help': help,
       };
-    } else {
-      throw Exception('Failed to parse question: Unexpected format');
+    } catch (e) {
+      print('Error parsing GPT response: $e');
+      rethrow; // Rethrow the error to ensure it surfaces in the app
     }
   }
 

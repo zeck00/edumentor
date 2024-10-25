@@ -1,11 +1,14 @@
+import 'package:edumentor/screens/questions.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:edumentor/asset-class/fonts.dart';
 import 'package:edumentor/widgets/newswidget.dart';
-import 'package:flutter/material.dart';
 import 'package:edumentor/asset-class/size_config.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     initSizeConfig(context);
@@ -35,14 +38,15 @@ class HomePage extends StatelessWidget {
                     ],
                   ),
                   InkWell(
-                      onTap: () {
-                        // Handle profile tap
-                      },
-                      child: CircleAvatar(
-                        radius: propWidth(22.5),
-                        backgroundColor: AppColors.black,
-                        child: SvgPicture.asset('assets/profile.svg'),
-                      )),
+                    onTap: () {
+                      // Handle profile tap
+                    },
+                    child: CircleAvatar(
+                      radius: propWidth(22.5),
+                      backgroundColor: AppColors.black,
+                      child: SvgPicture.asset('assets/profile.svg'),
+                    ),
+                  ),
                 ],
               ),
               SizedBox(height: propHeight(20)),
@@ -81,21 +85,38 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: propHeight(15)),
+
               // EduMentor AI Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("EduMentor AI", style: FontStyles.hometitle),
-                  SvgPicture.asset(
-                    'assets/g-next.svg',
-                    height: propHeight(30),
-                  ),
-                ],
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MCQQuizScreen()),
+                  );
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("EduMentor AI", style: FontStyles.hometitle),
+                    SvgPicture.asset(
+                      'assets/g-next.svg',
+                      height: propHeight(30),
+                    ),
+                  ],
+                ),
               ),
               SizedBox(height: propHeight(10)),
 
-              // EduMentor AI Card
-              _customCard('assets/EduMentor.png'),
+              // EduMentor AI Card - Navigating to QPage
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => MCQQuizScreen()),
+                  );
+                },
+                child: _customCard('assets/EduMentor.png'),
+              ),
               SizedBox(height: propHeight(20)),
 
               // Course Material Section

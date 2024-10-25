@@ -1,6 +1,9 @@
 include: package:flutter_lints/flutter.yaml
 analyzer:
   errors:
+    constant_identifier_names: ignore
+    library_private_types_in_public_api: ignore
     prefer_const_constructors: ignore
     prefer_const_literals_to_create_immutables: ignore
+    prefer_final_fields: ignore
     unused_import: ignore

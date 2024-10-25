@@ -9,27 +9,30 @@ class QuestMgr {
 
   double _totalScore = 0;
   int _questionCount = 0;
-  late List<Map<String, dynamic>> _questionsData; // Stores all questions
-  late List<int> _questionOrder; // To shuffle the order of questions
-  late List<List<int>> _answerOrder; // To shuffle the order of answers
+  late List<Map<String, dynamic>> _questionsData = [];
+  late List<int> _questionOrder;
+  Map<int, int> _selectedAnswers = {};
+  Map<String, double> _chapterScores = {};
 
-  Map<int, int> _selectedAnswers =
-      {}; // Tracks selected answers for each question
-  Map<String, double> _chapterScores = {}; // Tracks scores for each chapter
+  // Simplified mapping for correct answers
+  Map<int, int> _correctAnswerMap = {};
 
   // Singleton pattern for single instance creation
   static Future<QuestMgr> getInstance() async {
+    if (_instance != null) return _instance!;
+
     if (_isCreating) {
       while (_instance == null) {
         await Future.delayed(Duration(milliseconds: 5));
       }
-    } else {
-      _isCreating = true;
-      var instance = QuestMgr();
-      await instance._initialize();
-      _instance = instance;
-      _isCreating = false;
+      return _instance!;
     }
+
+    _isCreating = true;
+    var instance = QuestMgr();
+    await instance._initialize();
+    _instance = instance;
+    _isCreating = false;
     return _instance!;
   }
 
@@ -38,34 +41,50 @@ class QuestMgr {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/questions.json');
 
-    // Load existing questions, or generate if not present
     if (file.existsSync()) {
       final jsonString = await file.readAsString();
       _questionsData = List<Map<String, dynamic>>.from(json.decode(jsonString));
     } else {
-      await _generateNewQuestions(
-          10, 1); // Start with 10 questions, difficulty 1
+      await _generateNewQuestions(2, 1);
     }
 
     _questionCount = _questionsData.length;
     _shuffleQuestions();
     _initializeChapterScores();
+
+    _generateNewQuestionsInBackground(3, 3);
   }
 
-  // Shuffle question and answer order
-  void _shuffleQuestions() {
-    _questionOrder = List.generate(_questionCount, (index) => index)..shuffle();
-    _answerOrder = _questionsData.map((q) {
-      List<int> order = List.generate(q['choices'].length, (i) => i);
-      order.shuffle();
-      return order;
-    }).toList();
+  // Generate additional questions in the background
+  Future<void> _generateNewQuestionsInBackground(
+      int numQuestions, int difficulty) async {
+    await _generateNewQuestions(numQuestions, difficulty);
+    print("Generated additional questions in the background.");
+  }
+
+  // Generates new questions
+  Future<void> _generateNewQuestions(int numQuestions, int difficulty) async {
+    GPTQuestionGenerator generator = GPTQuestionGenerator();
+    List<Map<String, dynamic>> generatedQuestions = [];
+
+    for (int i = 0; i < numQuestions; i++) {
+      final questionData = await generator.generateQuestion(
+          difficulty + i, _totalScore.toInt(), _selectedAnswers.length);
+      generatedQuestions.add(questionData);
+    }
+
+    _questionsData.addAll(generatedQuestions);
+    _questionCount = _questionsData.length;
+    _shuffleQuestions();
+
+    // Save the updated questions to file
+    await _saveQuestions();
   }
 
   // Initialize chapter scores
   void _initializeChapterScores() {
     for (var question in _questionsData) {
-      String chapter = question['chapter'];
+      String chapter = question['chapter'] ?? 'Unknown Chapter';
       if (!_chapterScores.containsKey(chapter)) {
         _chapterScores[chapter] = 0.0;
       }
@@ -80,23 +99,24 @@ class QuestMgr {
 
   // Fetch a question by its index
   Future<String> getQuestion(int index) async {
-    return _questionsData[_questionOrder[index]]['question'];
+    return _questionsData[_questionOrder[index]]['question'] ??
+        'Unknown Question';
   }
 
   // Fetch the choices for a given question (in shuffled order)
   Future<List<String>> getChoices(int index) async {
-    List<String> choices = _questionsData[_questionOrder[index]]['choices'];
-    List<int> order = _answerOrder[index];
-    return order.map((i) => choices[i]).toList();
+    int mappedIndex = _questionOrder[index];
+    return List<String>.from(_questionsData[mappedIndex]['choices']);
   }
 
-  // Select an answer for a question, update scores
+  // Select an answer for a question and update scores
   Future<void> selectAnswer(int questionIndex, int choiceIndex) async {
     int mappedIndex = _questionOrder[questionIndex];
-    List<dynamic> points = _questionsData[mappedIndex]['points'];
-    String chapter = _questionsData[mappedIndex]['chapter'];
+    List<dynamic> points = _questionsData[mappedIndex]['points'] ?? [0.0];
+    String chapter =
+        _questionsData[mappedIndex]['chapter'] ?? 'Unknown Chapter';
 
-    // If answer was already selected, subtract the previous points
+    // Adjust score for previously selected answer
     if (_selectedAnswers.containsKey(questionIndex)) {
       int prevChoice = _selectedAnswers[questionIndex]!;
       _totalScore -= (points[prevChoice] as num).toDouble();
@@ -104,7 +124,7 @@ class QuestMgr {
           (points[prevChoice] as num).toDouble();
     }
 
-    // Add points for the new selection
+    // Add points for the newly selected answer
     _selectedAnswers[questionIndex] = choiceIndex;
     _totalScore += (points[choiceIndex] as num).toDouble();
     _chapterScores[chapter] = (_chapterScores[chapter] ?? 0) +
@@ -113,7 +133,7 @@ class QuestMgr {
 
   // Fetch help text for a question
   Future<String> getQuestionHelp(int index) async {
-    return _questionsData[_questionOrder[index]]['help'];
+    return _questionsData[_questionOrder[index]]['help'] ?? '';
   }
 
   // Add new questions (append) and shuffle them into the existing set
@@ -122,35 +142,13 @@ class QuestMgr {
     final GPTQuestionGenerator generator = GPTQuestionGenerator();
     final List<Map<String, dynamic>> newQuestions =
         await generator.generateNewQuestions(
-      numQuestions,
-      startDifficulty,
-      currentScore,
-      totalAnswered,
-    );
+            numQuestions, startDifficulty, currentScore, totalAnswered);
 
     _questionsData.addAll(newQuestions);
     _questionCount = _questionsData.length;
     _shuffleQuestions();
 
     // Save the updated questions to file
-    await _saveQuestions();
-  }
-
-  // Generates and saves new questions based on dynamic prompt
-  Future<void> _generateNewQuestions(int numQuestions, int difficulty) async {
-    GPTQuestionGenerator generator = GPTQuestionGenerator();
-    List<Map<String, dynamic>> generatedQuestions = [];
-
-    for (int i = 0; i < numQuestions; i++) {
-      final questionData = await generator.generateQuestion(
-          difficulty + i, _totalScore as int, _selectedAnswers.length);
-      generatedQuestions.add(questionData);
-    }
-
-    _questionsData.addAll(generatedQuestions);
-    _questionCount = _questionsData.length;
-    _shuffleQuestions();
-
     await _saveQuestions();
   }
 
@@ -161,7 +159,7 @@ class QuestMgr {
     await file.writeAsString(json.encode(_questionsData));
   }
 
-  // Method to reset scores if needed
+  // Reset scores if needed
   void resetScores() {
     _totalScore = 0;
     _chapterScores = _chapterScores.map((key, value) => MapEntry(key, 0.0));
@@ -171,5 +169,21 @@ class QuestMgr {
   void resetAllState() {
     _selectedAnswers.clear();
     resetScores();
+  }
+
+  // Shuffle questions and their answers, while preserving correct answer mapping
+  void _shuffleQuestions() {
+    _questionOrder = List.generate(_questionCount, (index) => index)..shuffle();
+
+    // Store correct answers in the mapping
+    for (int i = 0; i < _questionsData.length; i++) {
+      _correctAnswerMap[i] = _questionsData[i]['correct'];
+    }
+  }
+
+  // Fetch the correct answer index from the shuffled data
+  Future<int> getCorrectAnswerIndex(int index) async {
+    int mappedIndex = _questionOrder[index];
+    return _correctAnswerMap[mappedIndex] ?? 0;
   }
 }
