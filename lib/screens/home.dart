@@ -1,3 +1,4 @@
+import 'package:edumentor/screens/chapters.dart';
 import 'package:edumentor/screens/questions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -91,7 +92,8 @@ class HomePage extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => MCQQuizScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => ChapterSelectionScreen()),
                   );
                 },
                 child: Row(
@@ -112,7 +114,8 @@ class HomePage extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => MCQQuizScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => ChapterSelectionScreen()),
                   );
                 },
                 child: _customCard('assets/EduMentor.png'),

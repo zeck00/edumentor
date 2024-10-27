@@ -1,12 +1,25 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:edumentor/const.dart'; // Make sure your API key and other constants are here
+import 'package:edumentor/const.dart';
 
 class GPTQuestionGenerator {
-  // Generates a question based on user score and progress (number of questions answered)
+  // Generates a question based on user score, progress, and chapter context.
   Future<Map<String, dynamic>> generateQuestion(
-      int difficulty, int score, int numAnswered) async {
-    final String prompt = createDynamicPrompt(difficulty, score, numAnswered);
+    int difficulty,
+    int score,
+    int numAnswered,
+    String bestChapter,
+    String worstChapter,
+    int chapterNo,
+  ) async {
+    final String prompt = createDynamicPrompt(
+      difficulty,
+      score,
+      numAnswered,
+      bestChapter,
+      worstChapter,
+      chapterNo,
+    );
 
     // API request body
     final Map<String, dynamic> body = {
@@ -15,7 +28,7 @@ class GPTQuestionGenerator {
         {
           "role": "system",
           "content":
-              "You are an AI used to generate MCQs (Multiple Choice Questions) for a student assessment system. You will generate questions, answers, and assign specific points to each answer based on how close they are to the correct answer. The points for correct answers are 1, and partial answers receive 0.25, 0.5, or 0.75 based on their closeness to the correct answer. The points should not be random, they should reflect how much the answer approximates the truth. The questions should progressively get harder depending on the user's performance."
+              "You are an AI used to generate MCQs (Multiple Choice Questions) for a student assessment system. Each question should be based on the student's performance, with a focus on the selected chapter, the best-performing chapter, and the weakest-performing chapter."
         },
         {"role": "user", "content": prompt}
       ],
@@ -29,8 +42,7 @@ class GPTQuestionGenerator {
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization':
-              'Bearer ${ApiKeys.LapiKey}', // Make sure the API key is correct
+          'Authorization': 'Bearer ${ApiKeys.LapiKey}',
         },
         body: json.encode(body),
       );
@@ -39,10 +51,10 @@ class GPTQuestionGenerator {
         Map<String, dynamic> data = json.decode(response.body);
         String content = data['choices'][0]['message']['content'];
 
-        // Print the full raw GPT response to debug
+        // Print the full raw GPT response for debugging
         print("GPT response content:\n$content");
 
-        // Parse the content and extract the question, choices, points, and correct answer
+        // Parse the content and extract the question, choices, points, correct answer, and chapter
         return _parseGeneratedQuestion(content);
       } else {
         throw Exception('Failed to generate question: ${response.body}');
@@ -54,9 +66,25 @@ class GPTQuestionGenerator {
   }
 
   // Create a dynamic prompt for the OpenAI API
-  String createDynamicPrompt(int difficulty, int score, int numAnswered) {
+  String createDynamicPrompt(
+    int difficulty,
+    int score,
+    int numAnswered,
+    String bestChapter,
+    String worstChapter,
+    int chapterNo,
+  ) {
+    print("Generating question for chapter: $chapterNo");
+
     return '''
-    Generate a multiple-choice question related to health sciences and nutrition based on the following chapters:
+    Generate a multiple-choice question for a student in health sciences and nutrition focusing on the chapter: $chapterNo.
+
+    The student's best-performing chapter is: $bestChapter.
+    The student's weakest-performing chapter is: $worstChapter.
+    The student's chosen practice chapters are: $chapterNo.
+    Current score: $score. Questions answered so far: $numAnswered.
+
+    Chapters:
     1. Basic Nutritional Concepts (macronutrients, micronutrients, and energy balance)
     2. Digestion and Absorption (nutrient absorption processes, GI tract roles)
     3. Carbohydrates (types of carbohydrates, fiber, digestion)
@@ -73,16 +101,21 @@ class GPTQuestionGenerator {
     14. Water and Fluid Balance (hydration, electrolyte balance)
     15. Nutrition in Special Populations (pregnancy, elderly, athletes).
 
-    Include four multiple-choice answers, with each answer being scored based on its closeness to the correct answer (1, 0.75, 0.5, 0.25). 
-    Indicate the index of the correct answer (0-based index) and provide a short help explanation for the correct answer.
+    Please provide:
+    - A question related to one of the chapters above (focus on $chapterNo and $worstChapter).
+    - Four multiple-choice answers, with each answer being scored based on its closeness to the correct answer: 1 (correct), 0.75 (closely related), 0.5 (somewhat related), and 0.25 (incorrect).
+    - The correct answer's index (0-based).
+    - The chapter of the question.
+    - A brief help explanation of why the correct answer is right and guides the student to the correct answer.
 
-    Example:
-    Question: Which vitamin is essential for calcium absorption in the body?
-    Choices: Vitamin A, Vitamin D, Vitamin C, Vitamin B12
-    Points: 0.25, 1, 0.5, 0.25
-    Correct: 1
-    Help: Vitamin D helps the body absorb calcium, which is crucial for bone health.
-  ''';
+      Example:
+      Question: Which vitamin is essential for calcium absorption in the body?
+      Choices: Vitamin A, Vitamin D, Vitamin C, Vitamin B12
+      Points: 0.25, 1, 0.5, 0.25
+      Correct: 1
+      Chapter: 6
+      Help: Vitamin D helps the body absorb calcium, which is crucial for bone health.
+    ''';
   }
 
   // Parses the response content and formats it into a structured Map
@@ -92,6 +125,7 @@ class GPTQuestionGenerator {
       final choicesRegex = RegExp(r'Choices:\s*([\s\S]*?)\nPoints:');
       final pointsRegex = RegExp(r'Points:\s*([\s\S]*?)\n');
       final correctRegex = RegExp(r'Correct:\s*(\d+)');
+      final chapterRegex = RegExp(r'Chapter:\s*(\d+)');
       final helpRegex = RegExp(r'Help:\s*(.*)');
 
       // Extract the main parts of the question
@@ -99,6 +133,7 @@ class GPTQuestionGenerator {
       final choicesMatch = choicesRegex.firstMatch(content);
       final pointsMatch = pointsRegex.firstMatch(content);
       final correctMatch = correctRegex.firstMatch(content);
+      final chapterMatch = chapterRegex.firstMatch(content);
       final helpMatch = helpRegex.firstMatch(content);
 
       // Validate that we found everything
@@ -106,6 +141,7 @@ class GPTQuestionGenerator {
           choicesMatch == null ||
           pointsMatch == null ||
           correctMatch == null ||
+          chapterMatch == null ||
           helpMatch == null) {
         throw Exception(
             'Failed to parse: missing key elements in the GPT response.');
@@ -115,32 +151,24 @@ class GPTQuestionGenerator {
       String question = questionMatch.group(1)!.trim();
       String help = helpMatch.group(1)!.trim();
 
-      // LOG: Show raw choices content before parsing
-      print("Raw choices content: ${choicesMatch.group(1)}");
-
       // Parse the choices
       List<String> choices = choicesMatch
           .group(1)!
-          .split(RegExp(
-              r'\n|^\d+\.\s*|,\s*')) // Split by newline, numbered lists, or commas
+          .split(RegExp(r'\n|^\d+\.\s*|,\s*'))
           .map((choice) => choice.trim())
-          .where((choice) => choice.isNotEmpty) // Remove empty entries
+          .where((choice) => choice.isNotEmpty)
           .toList();
-
-      // LOG: Show parsed choices to ensure they are separated correctly
-      print("Parsed choices: $choices");
 
       // Parse the points
       List<double> points = pointsMatch
           .group(1)!
-          .split(RegExp(r'[\s,]+')) // Split by spaces or commas
-          .map((point) =>
-              double.tryParse(point.trim()) ??
-              0.0) // Ensure all points are converted to double
+          .split(RegExp(r'[\s,]+'))
+          .map((point) => double.tryParse(point.trim()) ?? 0.0)
           .toList();
 
-      // Parse the correct answer index
+      // Parse the correct answer index and chapter
       int correct = int.tryParse(correctMatch.group(1)!.trim()) ?? 0;
+      String chapter = chapterMatch.group(1)!.trim();
 
       // Ensure the choices and points lengths match EXACTLY
       if (choices.length != points.length) {
@@ -154,25 +182,12 @@ class GPTQuestionGenerator {
         'choices': choices,
         'points': points,
         'correct': correct,
+        'chapter': chapter,
         'help': help,
       };
     } catch (e) {
       print('Error parsing GPT response: $e');
-      rethrow; // Rethrow the error to ensure it surfaces in the app
+      rethrow;
     }
-  }
-
-  // Generates a batch of questions based on progress
-  Future<List<Map<String, dynamic>>> generateNewQuestions(int numQuestions,
-      int startingDifficulty, int currentScore, int totalAnswered) async {
-    List<Map<String, dynamic>> questions = [];
-
-    for (int i = 0; i < numQuestions; i++) {
-      final questionData = await generateQuestion(
-          startingDifficulty + i, currentScore, totalAnswered + i);
-      questions.add(questionData);
-    }
-
-    return questions;
   }
 }
