@@ -23,12 +23,12 @@ class GPTQuestionGenerator {
 
     // API request body
     final Map<String, dynamic> body = {
-      "model": "gpt-4",
+      "model": "gpt-4o-mini",
       "messages": [
         {
           "role": "system",
           "content":
-              "You are an AI used to generate MCQs (Multiple Choice Questions) for a student assessment system. Each question should be based on the student's performance, with a focus on the selected chapter, the best-performing chapter, and the weakest-performing chapter."
+              "You are an instructor used to generate MCQs (Multiple Choice Questions) in specific format for a student assessment system. Each question should be based on the student's performance, with a focus on the selected chapter and the weakest-performing chapter."
         },
         {"role": "user", "content": prompt}
       ],
@@ -118,17 +118,24 @@ class GPTQuestionGenerator {
     ''';
   }
 
-  // Parses the response content and formats it into a structured Map
   Map<String, dynamic> _parseGeneratedQuestion(String content) {
     try {
-      final questionRegex = RegExp(r'Question:\s*(.*)');
-      final choicesRegex = RegExp(r'Choices:\s*([\s\S]*?)\nPoints:');
-      final pointsRegex = RegExp(r'Points:\s*([\s\S]*?)\n');
-      final correctRegex = RegExp(r'Correct:\s*(\d+)');
-      final chapterRegex = RegExp(r'Chapter:\s*(\d+)');
-      final helpRegex = RegExp(r'Help:\s*(.*)');
+      // Clean up content by removing ** and extra whitespace.
+      content = content.replaceAll(RegExp(r'\*\*|\n|\r'), ' ').trim();
+      print('Cleaned Content: $content');
 
-      // Extract the main parts of the question
+      // Define regex patterns with ** markers as section delimiters.
+      final questionRegex =
+          RegExp(r'Question:\s*(.*?)\s*Choices:', dotAll: true);
+      final choicesRegex =
+          RegExp(r'Choices:\s*([\s\S]*?)\s*Points:', dotAll: true);
+      final pointsRegex =
+          RegExp(r'Points:\s*([\s\S]*?)\s*Correct:', dotAll: true);
+      final correctRegex = RegExp(r'Correct:\s*(\d+)', dotAll: true);
+      final chapterRegex = RegExp(r'Chapter:\s*(\d+)', dotAll: true);
+      final helpRegex = RegExp(r'Help:\s*(.*?)$', dotAll: true);
+
+      // Match each section with error checking.
       final questionMatch = questionRegex.firstMatch(content);
       final choicesMatch = choicesRegex.firstMatch(content);
       final pointsMatch = pointsRegex.firstMatch(content);
@@ -136,7 +143,6 @@ class GPTQuestionGenerator {
       final chapterMatch = chapterRegex.firstMatch(content);
       final helpMatch = helpRegex.firstMatch(content);
 
-      // Validate that we found everything
       if (questionMatch == null ||
           choicesMatch == null ||
           pointsMatch == null ||
@@ -147,42 +153,42 @@ class GPTQuestionGenerator {
             'Failed to parse: missing key elements in the GPT response.');
       }
 
-      // Parse the question and help text
+      // Extract question, help, chapter, and correct answer index.
       String question = questionMatch.group(1)!.trim();
       String help = helpMatch.group(1)!.trim();
+      int chapter =
+          int.parse(chapterMatch.group(1)!.trim()); // Ensure chapter is an int
+      int correct = int.parse(
+          correctMatch.group(1)!.trim()); // Ensure correct answer is an int
 
-      // Parse the choices
+      // Extract and clean up choices.
       List<String> choices = choicesMatch
           .group(1)!
-          .split(RegExp(r'\n|^\d+\.\s*|,\s*'))
+          .split(RegExp(r'\s*\d+\.\s*|\s*[A-Z]\)\s*|,'))
           .map((choice) => choice.trim())
           .where((choice) => choice.isNotEmpty)
           .toList();
 
-      // Parse the points
+      // Parse points and validate lengths.
       List<double> points = pointsMatch
           .group(1)!
           .split(RegExp(r'[\s,]+'))
-          .map((point) => double.tryParse(point.trim()) ?? 0.0)
+          .map((p) => double.tryParse(p.trim()) ?? 0.0)
           .toList();
 
-      // Parse the correct answer index and chapter
-      int correct = int.tryParse(correctMatch.group(1)!.trim()) ?? 0;
-      String chapter = chapterMatch.group(1)!.trim();
-
-      // Ensure the choices and points lengths match EXACTLY
       if (choices.length != points.length) {
-        throw Exception(
-            'Mismatch between number of choices and points! Choices: ${choices.length}, Points: ${points.length}');
+        print(
+            "Mismatch found - Choices: ${choices.length}, Points: ${points.length}");
+        throw Exception('Mismatch between number of choices and points.');
       }
 
-      // Return the structured data
+      // Return parsed question data.
       return {
         'question': question,
         'choices': choices,
         'points': points,
-        'correct': correct,
-        'chapter': chapter,
+        'correct': correct, // Cast as integer
+        'chapter': chapter, // Cast as integer
         'help': help,
       };
     } catch (e) {

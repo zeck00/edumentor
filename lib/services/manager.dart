@@ -91,19 +91,24 @@ class QuestMgr {
           chapterNo,
         );
 
+        // Ensure chapter and correct answer are consistently String or int as needed
+        questionData['chapter'] =
+            questionData['chapter'].toString(); // Ensure chapter is String
+        questionData['correct'] = int.tryParse(questionData['correct']
+            .toString()); // Parse correct as int if needed
+
         if (!_questionsData
             .any((q) => q['question'] == questionData['question'])) {
           _questionsData.add(questionData);
           _questionCount = _questionsData.length;
 
-          // Emit the new question as soon as it's generated.
+          // Emit each question as it’s generated
           _questionStreamController.add(questionData);
         }
       } catch (e) {
         print('Error generating question for chapter $chapterNo: $e');
       }
     }
-
     await _saveQuestions();
   }
 
@@ -125,7 +130,8 @@ class QuestMgr {
   void _initializeChapterScores() {
     chapterScores.clear();
     for (var question in _questionsData) {
-      String chapter = question['chapter'] ?? 'Unknown';
+      String chapter =
+          question['chapter'].toString(); // Ensure chapter is String
       chapterScores[chapter] = chapterScores[chapter] ?? 0.0;
     }
   }
