@@ -345,7 +345,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
           ),
 
           // Chapter scores section
-          _isScoresLoaded ? _buildChapterScores() : Container(),
+          _isScoresLoaded ? Center(child: _buildChapterScores()) : Container(),
           SizedBox(height: propHeight(24)),
           Text('Total Score: $_totalScore', style: FontStyles.hometitleg),
         ],
@@ -373,32 +373,38 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     double maxScore =
         filteredScores.map((e) => e.value).reduce((a, b) => a > b ? a : b);
 
-    return Column(
-      children: filteredScores.map((entry) {
-        double score = entry.value;
-        double barWidth = (score / maxScore) * propWidth(200);
-        barWidth = barWidth.isNaN ? 0 : barWidth;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: filteredScores.map((entry) {
+          double score = entry.value;
+          double barWidth = (score / maxScore) * propWidth(200);
+          barWidth = barWidth.isNaN ? 0 : barWidth;
 
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: propHeight(4)),
-          child: Row(
-            children: [
-              Text(entry.key, style: FontStyles.sub),
-              SizedBox(width: propWidth(10)),
-              Container(
-                height: propHeight(10),
-                width: barWidth,
-                decoration: BoxDecoration(
-                  color: AppColors.green,
-                  borderRadius: BorderRadius.circular(5),
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: propHeight(4)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center, // Center the row
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text('Chap ${entry.key}', style: FontStyles.sub),
+                SizedBox(width: propWidth(10)),
+                Container(
+                  height: propHeight(10),
+                  width: barWidth,
+                  decoration: BoxDecoration(
+                    color: AppColors.green,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
                 ),
-              ),
-              SizedBox(width: propWidth(10)),
-              Text('${score.toStringAsFixed(2)}', style: FontStyles.sub),
-            ],
-          ),
-        );
-      }).toList(),
+                SizedBox(width: propWidth(10)),
+                Text('${score.toStringAsFixed(2)}', style: FontStyles.sub),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
