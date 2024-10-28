@@ -32,6 +32,8 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   List<String> _choices = [];
   double _loadingProgress = 0.0;
   bool _isScoresLoaded = false;
+  bool _isHelpVisible = false; // Add this variable to track help visibility
+  String _currentHelpText = ''; // Store the help text for the current question
   StreamSubscription<Map<String, dynamic>>? _questionSubscription;
 
   @override
@@ -101,12 +103,16 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     setState(() {
       _choices = [];
       _isLoading = true;
+      _isHelpVisible = false; // Hide the help text when loading a new question
+      _currentHelpText = ''; // Reset the help text when loading a new question
     });
 
     try {
       _choices = await _questMgr!.getChoices(_currentQuestionIndex);
       _correctAnswerIndex =
           await _questMgr!.getCorrectAnswerIndex(_currentQuestionIndex);
+      _currentHelpText =
+          await _questMgr!.getQuestionHelp(_currentQuestionIndex);
     } catch (e) {
       print("Error loading question: $e");
       QuickAlert.show(
@@ -234,6 +240,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
 
   Widget _buildQuizContent() {
     return SingleChildScrollView(
+      physics: BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(horizontal: propWidth(16)),
       child: Column(
         children: [
@@ -305,6 +312,39 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
                 )
               : Container(),
           SizedBox(height: propHeight(24)),
+          // Help button to show/hide the help text
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _isHelpVisible = !_isHelpVisible;
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.black,
+            ),
+            child: Text(_isHelpVisible ? 'Hide Help' : 'Show Help',
+                style: FontStyles.button),
+          ),
+
+          // Display the help text if it's visible
+          if (_isHelpVisible)
+            Padding(
+              padding: EdgeInsets.all(propHeight(16)),
+              child: Text(
+                _currentHelpText,
+                style: FontStyles.sub,
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+          // Add a divider to separate the help text and the chapter scores.
+          Divider(
+            color: Colors.grey, // Adjust color as needed.
+            thickness: 1.0, // Adjust thickness as needed.
+            height: propHeight(24),
+          ),
+
+          // Chapter scores section
           _isScoresLoaded ? _buildChapterScores() : Container(),
           SizedBox(height: propHeight(24)),
           Text('Total Score: $_totalScore', style: FontStyles.hometitleg),
@@ -316,7 +356,8 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   Widget _buildChapterScores() {
     if (_questMgr == null || _questMgr!.chapterScores.isEmpty) {
       return Center(
-          child: Text('No chapter scores available.', style: FontStyles.sub));
+          child: Text('Fetching Chapter Scores As You Progress!',
+              style: FontStyles.sub));
     }
 
     var filteredScores = _questMgr!.chapterScores.entries
@@ -325,7 +366,8 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
 
     if (filteredScores.isEmpty) {
       return Center(
-          child: Text('No chapter scores to display.', style: FontStyles.sub));
+          child: Text('Fetching Chapter Scores As You Progress!',
+              style: FontStyles.sub));
     }
 
     double maxScore =

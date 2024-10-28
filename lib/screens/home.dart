@@ -1,14 +1,27 @@
+import 'package:edumentor/screens/aboutus.dart';
 import 'package:edumentor/screens/chapters.dart';
-import 'package:edumentor/screens/questions.dart';
+import 'package:edumentor/screens/course.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:edumentor/asset-class/fonts.dart';
-import 'package:edumentor/widgets/newswidget.dart';
 import 'package:edumentor/asset-class/size_config.dart';
+import 'package:mirai_dropdown_menu/mirai_dropdown_menu.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  ValueNotifier<String> _selectedCourseNotifier =
+      ValueNotifier('Select a Course');
+  final List<String> _courses = [
+    'Health Awareness and Nutrition',
+    'Coming Soon...',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +42,9 @@ class HomePage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/logo.svg',
-                        height: propHeight(55),
-                      ),
-                    ],
+                  SvgPicture.asset(
+                    'assets/logo.svg',
+                    height: propHeight(55),
                   ),
                   InkWell(
                     onTap: () {
@@ -52,39 +60,69 @@ class HomePage extends StatelessWidget {
               ),
               SizedBox(height: propHeight(20)),
 
-              // Latest News Section
+              // MiraiDropdownWidget for Course Selection
               Text(
-                "Latest News",
-                style: FontStyles.hometitle, // Default title style
+                "Select a Course",
+                style: FontStyles.hometitle,
               ),
               SizedBox(height: propHeight(10)),
 
-              // News Grid
-              SizedBox(
-                height: propHeight(230),
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  clipBehavior: Clip.none,
-                  children: [
-                    NewsCard(
-                      imagePath: "assets/campus.png",
-                      title: "AI-Powered Study...",
-                    ),
-                    NewsCard(
-                      imagePath: 'assets/class.png',
-                      title: 'Classrooms Evolved...',
-                    ),
-                    NewsCard(
-                      imagePath: 'assets/power.png',
-                      title: 'Classrooms Evolved...',
-                    ),
-                    NewsCard(
-                      imagePath: 'assets/power.png',
-                      title: 'Classrooms Evolved...',
-                    ),
-                  ],
+              MiraiDropDownMenu<String>(
+                valueNotifier: _selectedCourseNotifier,
+                itemWidgetBuilder: (int index, String? item,
+                    {bool isItemSelected = false}) {
+                  return MiraiDropDownItemWidget(
+                    item: item ?? '',
+                    isItemSelected: isItemSelected,
+                  );
+                },
+                children: _courses,
+                onChanged: (String newValue) {
+                  // if (newValue == 'Health Awareness and Nutrition') {
+                  //   Navigator.push(
+                  //     context,
+                  //     MaterialPageRoute(
+                  //       builder: (context) => ChapterSelectionScreen(),
+                  //     ),
+                  //   );
+                  // }
+                  // _selectedCourseNotifier.value = newValue;
+                },
+                showSeparator: true,
+                showMode: MiraiShowMode.bottom,
+                maxHeight: propHeight(150),
+                child: Container(
+                  key: GlobalKey(), // Add this key
+                  padding: EdgeInsets.symmetric(horizontal: propWidth(15)),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(propHeight(15)),
+                    border: Border.all(
+                        color: AppColors.black, width: propHeight(1.5)),
+                  ),
+                  height: propHeight(50),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      ValueListenableBuilder<String>(
+                        valueListenable: _selectedCourseNotifier,
+                        builder: (_, String chosenTitle, __) {
+                          return Text(
+                            chosenTitle,
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
+                      ),
+                      Icon(
+                        Icons.arrow_drop_down_rounded,
+                        size: propHeight(40),
+                        color: AppColors.black,
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
               SizedBox(height: propHeight(15)),
 
               // EduMentor AI Section
@@ -93,7 +131,8 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => ChapterSelectionScreen()),
+                      builder: (context) => ChapterSelectionScreen(),
+                    ),
                   );
                 },
                 child: Row(
@@ -109,13 +148,14 @@ class HomePage extends StatelessWidget {
               ),
               SizedBox(height: propHeight(10)),
 
-              // EduMentor AI Card - Navigating to QPage
+              // EduMentor AI Card
               GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => ChapterSelectionScreen()),
+                      builder: (context) => ChapterSelectionScreen(),
+                    ),
                   );
                 },
                 child: _customCard('assets/EduMentor.png'),
@@ -123,28 +163,68 @@ class HomePage extends StatelessWidget {
               SizedBox(height: propHeight(20)),
 
               // Course Material Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Course Material", style: FontStyles.hometitle),
-                  SvgPicture.asset(
-                    'assets/b-next.svg',
-                    height: propHeight(30),
-                  ),
-                ],
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CourseMaterialPage(),
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Course Material", style: FontStyles.hometitle),
+                    SvgPicture.asset(
+                      'assets/b-next.svg',
+                      height: propHeight(30),
+                    ),
+                  ],
+                ),
               ),
               SizedBox(height: propHeight(10)),
 
               // Course Material Card
-              _customCard('assets/CourseMaterial.png'),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CourseMaterialPage(),
+                    ),
+                  );
+                },
+                child: _customCard('assets/CourseMaterial.png'),
+              ),
               SizedBox(height: propHeight(30)),
 
               // Bottom Buttons (Settings & About Us)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _bottomButton("Settings"),
-                  _bottomButton("About Us"),
+                  _bottomButton(
+                    "Settings",
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AboutUsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  _bottomButton(
+                    "About Us",
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AboutUsPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
@@ -154,14 +234,14 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Reusable method for custom cards (EduMentor AI & Course Material)
   Widget _customCard(String imagePath) {
     return Container(
       width: double.infinity,
-      height: propHeight(135),
+      height: propHeight(225),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(propWidth(25)),
         image: DecorationImage(
+          alignment: Alignment.center,
           image: AssetImage(imagePath),
           fit: BoxFit.cover,
         ),
@@ -169,33 +249,54 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // Reusable method for bottom buttons (Settings & About Us)
-  Widget _bottomButton(String label) {
+  Widget _bottomButton(String label, onTap) {
     return GestureDetector(
-      onTap: () {
-        // Handle button tap
-      },
+      onTap: onTap,
       child: Container(
-        width: propWidth(175), // Set the width to 175 propWidth
-        height: propHeight(55), // Set the height to 52 propHeight
+        width: propWidth(175),
+        height: propHeight(55),
         decoration: BoxDecoration(
-          color: AppColors.gray, // Set the background color to gray
-          borderRadius: BorderRadius.circular(propWidth(25)), // Rounded edges
+          color: AppColors.gray,
+          borderRadius: BorderRadius.circular(propWidth(25)),
         ),
         child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.spaceEvenly, // Space text and icon
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             Text(
               label,
-              style: FontStyles.button1
-                  .copyWith(color: AppColors.black), // Button text style
+              style: FontStyles.button1.copyWith(color: AppColors.black),
             ),
             SvgPicture.asset(
-              'assets/b-next.svg', // SVG icon as shown in the example
-              height: propHeight(30), // Icon height adjusted to 30 propHeight
+              'assets/b-next.svg',
+              height: propHeight(30),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class MiraiDropDownItemWidget extends StatelessWidget {
+  const MiraiDropDownItemWidget({
+    Key? key,
+    required this.item,
+    required this.isItemSelected,
+  }) : super(key: key);
+
+  final String item;
+  final bool isItemSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+          vertical: propHeight(15), horizontal: propWidth(15)),
+      child: Text(
+        item,
+        style: TextStyle(
+          color: isItemSelected ? Colors.white : Colors.black,
+          fontWeight: isItemSelected ? FontWeight.bold : FontWeight.bold,
         ),
       ),
     );

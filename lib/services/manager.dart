@@ -62,7 +62,7 @@ class QuestMgr {
     } else {
       print(
           'No saved questions found. Generating new questions for selected chapters: $selectedChapters.');
-      await generateNewQuestions(10, difficulty, selectedChapters);
+      await generateNewQuestions(5, difficulty, selectedChapters);
     }
 
     _initializeChapterScores();
