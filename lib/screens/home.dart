@@ -1,6 +1,7 @@
 import 'package:edumentor/screens/aboutus.dart';
 import 'package:edumentor/screens/chapters.dart';
 import 'package:edumentor/screens/course.dart';
+import 'package:edumentor/screens/questions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
@@ -132,7 +133,7 @@ class _HomePageState extends State<HomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ChapterSelectionScreen(),
+                        builder: (context) => MCQQuizScreen(),
                       ),
                     );
                   },
@@ -155,7 +156,7 @@ class _HomePageState extends State<HomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ChapterSelectionScreen(),
+                        builder: (context) => MCQQuizScreen(),
                       ),
                     );
                   },
@@ -281,10 +282,10 @@ class _HomePageState extends State<HomePage> {
 
 class MiraiDropDownItemWidget extends StatelessWidget {
   const MiraiDropDownItemWidget({
-    Key? key,
+    super.key,
     required this.item,
     required this.isItemSelected,
-  }) : super(key: key);
+  });
 
   final String item;
   final bool isItemSelected;

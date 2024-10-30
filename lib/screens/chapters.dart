@@ -142,10 +142,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => MCQQuizScreen(
-            selectedChapters: selectedChapters,
-            difficultyLevel: _difficultyLevel.toInt(),
-          ),
+          builder: (context) => MCQQuizScreen(),
         ),
       );
     }

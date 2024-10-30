@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'generator.dart';
@@ -20,8 +20,10 @@ class QuestMgr {
   Stream<Map<String, dynamic>> get questionStream =>
       _questionStreamController.stream;
 
-  static Future<QuestMgr> getInstance(
-      {required List<int> selectedChapters}) async {
+  static Future<QuestMgr> getInstance({
+    required List<int> selectedChapters,
+    required int difficulty,
+  }) async {
     if (_instance != null) return _instance!;
     if (_isCreating) {
       while (_instance == null) {
@@ -49,7 +51,8 @@ class QuestMgr {
       final jsonString = await file.readAsString();
       _questionsData = List<Map<String, dynamic>>.from(json.decode(jsonString));
       _questionCount = _questionsData.length;
-      _questionsData.forEach(_questionStreamController.add);
+      _questionStreamController.addStream(
+          Stream.fromIterable(_questionsData.where((q) => q['read'] != true)));
     } else {
       await generateNewQuestions(5, difficulty, selectedChapters);
     }
@@ -58,12 +61,18 @@ class QuestMgr {
   }
 
   Future<void> generateNewQuestions(
-      int numQuestions, int difficulty, List<int> selectedChapters) async {
+    int numQuestions,
+    int difficulty,
+    List<int> selectedChapters,
+  ) async {
     GPTQuestionGenerator generator = GPTQuestionGenerator();
 
     for (int i = 0; i < numQuestions; i++) {
-      final int chapterNo = selectedChapters[i % selectedChapters.length];
+      if (getUnreadQuestionCount() >= 10) {
+        break; // Stop if there are 10 unread questions
+      }
 
+      final int chapterNo = selectedChapters[i % selectedChapters.length];
       try {
         final questionData = await generator.generateQuestion(
           difficulty + i,
@@ -74,12 +83,10 @@ class QuestMgr {
           chapterNo,
         );
 
-        // Ensure chapter and correct are consistent
-        questionData['chapter'] =
-            questionData['chapter'].toString(); // Chapter as String
+        questionData['chapter'] = questionData['chapter'].toString();
         questionData['correct'] =
-            int.tryParse(questionData['correct'].toString()) ??
-                0; // Correct as int, default to 0
+            int.tryParse(questionData['correct'].toString()) ?? 0;
+        questionData['read'] = false;
 
         if (!_questionsData
             .any((q) => q['question'] == questionData['question'])) {
@@ -110,52 +117,48 @@ class QuestMgr {
   void _initializeChapterScores() {
     chapterScores.clear();
     for (var question in _questionsData) {
-      String chapter =
-          question['chapter'].toString(); // Ensure chapter is String
+      String chapter = question['chapter'].toString();
       chapterScores[chapter] = chapterScores[chapter] ?? 0.0;
     }
   }
 
   Future<String> getQuestion(int index) async {
-    if (index >= _questionCount) return 'No more questions available.';
+    if (index >= _questionsData.length) return 'No more questions available.';
     return _questionsData[index]['question'] ?? 'Unknown Question';
   }
 
   Future<List<String>> getChoices(int index) async {
-    if (index >= _questionCount) return [];
+    if (index >= _questionsData.length) return [];
     return List<String>.from(_questionsData[index]['choices']);
   }
 
-  Future<int> getCorrectAnswerIndex(int questionIndex) async {
-    if (questionIndex >= _questionCount) return 0;
-    List<dynamic> points = _questionsData[questionIndex]['points'] ?? [0.0];
+  Future<int> getCorrectAnswerIndex(int index) async {
+    if (index >= _questionsData.length) return 0;
+    List<dynamic> points = _questionsData[index]['points'] ?? [0.0];
     return points.indexWhere((p) => (p as num).toDouble() == 1.0);
   }
 
-// Select an answer and update the score
-  Future<void> selectAnswer(int questionIndex, int selectedChoiceIndex) async {
-    if (questionIndex >= _questionCount) return;
+  Future<String> getQuestionHelp(int index) async {
+    if (index >= _questionsData.length) return '';
+    return _questionsData[index]['help'] ?? '';
+  }
 
-    // Fetch the points and chapter values, ensuring proper types
+  Future<void> selectAnswer(int questionIndex, int selectedChoiceIndex) async {
+    if (questionIndex >= _questionsData.length) return;
+
     List<dynamic> points = _questionsData[questionIndex]['points'] ?? [0.0];
     String chapter =
         _questionsData[questionIndex]['chapter']?.toString() ?? 'Unknown';
 
-    // Ensure points[selectedChoiceIndex] is treated as a double for _totalScore
     double earnedPoints =
         (points[selectedChoiceIndex] as num?)?.toDouble() ?? 0.0;
 
-    // Update the total score and chapter score, enforcing String for chapter keys
     _totalScore += earnedPoints;
     chapterScores[chapter] = (chapterScores[chapter] ?? 0.0) + earnedPoints;
 
-    // Store the selected answer
+    _questionsData[questionIndex]['read'] = true;
+    await _saveQuestions();
     _selectedAnswers[questionIndex] = selectedChoiceIndex;
-  }
-
-  Future<String> getQuestionHelp(int index) async {
-    if (index >= _questionCount) return '';
-    return _questionsData[index]['help'] ?? '';
   }
 
   Future<void> _saveQuestions() async {
@@ -169,5 +172,15 @@ class QuestMgr {
 
   void dispose() {
     _questionStreamController.close();
+  }
+
+  int getUnreadQuestionCount() {
+    return _questionsData.where((q) => q['read'] != true).length;
+  }
+
+  Future<int> getQuestionChapter(int index) async {
+    if (index >= _questionsData.length) return -1;
+    return int.tryParse(_questionsData[index]['chapter']?.toString() ?? '-1') ??
+        -1;
   }
 }

@@ -16,6 +16,8 @@ dependencies:
   path_provider: ^2.1.4
   quickalert: ^1.1.0
   rename: ^3.0.2
+  shared_preferences: ^2.3.2
+  skeletonizer: ^1.4.2
   syncfusion_flutter_pdfviewer: ^27.1.56
   wave_loading_indicator: ^1.0.7
 

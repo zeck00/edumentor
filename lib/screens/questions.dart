@@ -1,21 +1,15 @@
 import 'dart:async';
+import 'package:edumentor/screens/scores.dart';
 import 'package:flutter/material.dart';
-import 'package:edumentor/services/manager.dart';
-import 'package:edumentor/asset-class/colors.dart';
-import 'package:edumentor/asset-class/fonts.dart';
-import 'package:edumentor/asset-class/size_config.dart';
-import 'package:wave_loading_indicator/wave_progress.dart';
-import 'package:quickalert/quickalert.dart';
+import 'package:edumentor/services/manager.dart'; // Your QuestMgr class
+import 'package:edumentor/asset-class/colors.dart'; // Your color definitions
+import 'package:edumentor/asset-class/fonts.dart'; // Your font styles
+import 'package:edumentor/asset-class/size_config.dart'; // Size configuration
+import 'package:quickalert/quickalert.dart'; // Alert dialogs
+import 'package:skeletonizer/skeletonizer.dart'; // Loading skeletons
 
 class MCQQuizScreen extends StatefulWidget {
-  final List<int> selectedChapters;
-  final int difficultyLevel;
-
-  const MCQQuizScreen({
-    required this.selectedChapters,
-    required this.difficultyLevel,
-    super.key,
-  });
+  const MCQQuizScreen({super.key});
 
   @override
   _MCQQuizScreenState createState() => _MCQQuizScreenState();
@@ -24,192 +18,94 @@ class MCQQuizScreen extends StatefulWidget {
 class _MCQQuizScreenState extends State<MCQQuizScreen> {
   QuestMgr? _questMgr;
   int _currentQuestionIndex = 0;
-  double _totalScore = 0;
-  bool _isAnswerSelected = false;
-  int? _selectedAnswer;
-  bool _isLoading = true;
-  int? _correctAnswerIndex;
-  List<String> _choices = [];
-  double _loadingProgress = 0.0;
-  bool _isScoresLoaded = false;
-  bool _isHelpVisible = false; // Add this variable to track help visibility
-  String _currentHelpText = ''; // Store the help text for the current question
-  StreamSubscription<Map<String, dynamic>>? _questionSubscription;
+  bool _isLoadingQuestion = true;
+  bool _isHelpVisible = false;
+  final PageController _pageController = PageController();
+  List<int> _coveredChapters = [];
+  List<String> _questions = [];
+  List<List<String>> _choicesList = [];
+  List<int?> _correctAnswers = [];
+  List<int?> _selectedAnswers = [];
+  List<bool> _answeredQuestions = [];
+  List<String> _helpTexts = [];
+
+  double _difficultyLevel = 1.0;
+  List<int> _selectedChapters = List.generate(15, (index) => index + 1);
+  double _totalScore = 0.0;
+  Map<String, double> _chapterScores = {};
 
   @override
   void initState() {
     super.initState();
-    _initializeQuestMgr();
-    _simulateProgress();
+    _initializeQuiz();
   }
 
-  @override
-  void dispose() {
-    _questionSubscription?.cancel();
-    super.dispose();
+  Future<void> _initializeQuiz() async {
+    await _initializeQuestMgr();
+    await _generateFirstQuestion();
+    await _loadQuestionsFromIndex(1);
   }
 
   Future<void> _initializeQuestMgr() async {
-    try {
-      final questMgr = await QuestMgr.getInstance(
-        selectedChapters: widget.selectedChapters,
-      );
-      await questMgr.initialize(
-        selectedChapters: widget.selectedChapters,
-        difficulty: widget.difficultyLevel,
-      );
+    _questMgr = await QuestMgr.getInstance(
+      selectedChapters: _selectedChapters,
+      difficulty: _difficultyLevel.toInt(),
+    );
+  }
 
-      setState(() {
-        _questMgr = questMgr;
-        _totalScore = questMgr.totalScore;
-        _isLoading = false;
-      });
+  Future<void> _loadQuestionsFromIndex(int startIndex) async {
+    int totalQuestions = _questMgr!.questionCount;
+    for (int i = startIndex; i < totalQuestions; i++) {
+      try {
+        final question = await _questMgr!.getQuestion(i);
+        final choices = await _questMgr!.getChoices(i);
+        final correctAnswer = await _questMgr!.getCorrectAnswerIndex(i);
+        final helpText = await _questMgr!.getQuestionHelp(i);
 
-      // Subscribe to the question stream to update the UI as new questions are generated
-      _questionSubscription = questMgr.questionStream.listen((question) {
         setState(() {
-          _isLoading = false;
-          _loadingProgress = 100.0;
+          _questions.add(question);
+          _choicesList.add(choices);
+          _correctAnswers.add(correctAnswer);
+          _helpTexts.add(helpText);
+          _answeredQuestions.add(false);
+          _selectedAnswers.add(null);
         });
-
-        if (_currentQuestionIndex == 0) {
-          _loadQuestion();
-        }
-      });
-
-      await _loadQuestion();
-      setState(() {
-        _isScoresLoaded = true;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _isScoresLoaded = true;
-      });
-      print("Error during QuestMgr initialization: $e");
-      QuickAlert.show(
-        context: context,
-        type: QuickAlertType.error,
-        title: 'Initialization Error',
-        text: 'Could not initialize quiz. Please try again later.',
-        confirmBtnColor: AppColors.green,
-      );
+      } catch (e) {
+        print("Error adding question to UI: $e");
+      }
     }
   }
 
-  Future<void> _loadQuestion() async {
-    if (_questMgr == null) return;
-
+  Future<void> _generateFirstQuestion() async {
     setState(() {
-      _choices = [];
-      _isLoading = true;
-      _isHelpVisible = false; // Hide the help text when loading a new question
-      _currentHelpText = ''; // Reset the help text when loading a new question
+      _isLoadingQuestion = true;
     });
 
     try {
-      _choices = await _questMgr!.getChoices(_currentQuestionIndex);
-      _correctAnswerIndex =
+      final question = await _questMgr!.getQuestion(_currentQuestionIndex);
+      final choices = await _questMgr!.getChoices(_currentQuestionIndex);
+      final correctAnswer =
           await _questMgr!.getCorrectAnswerIndex(_currentQuestionIndex);
-      _currentHelpText =
-          await _questMgr!.getQuestionHelp(_currentQuestionIndex);
+      final helpText = await _questMgr!.getQuestionHelp(_currentQuestionIndex);
+
+      setState(() {
+        _questions.add(question);
+        _choicesList.add(choices);
+        _correctAnswers.add(correctAnswer);
+        _helpTexts.add(helpText);
+        _answeredQuestions.add(false);
+        _selectedAnswers.add(null);
+      });
     } catch (e) {
-      print("Error loading question: $e");
-      QuickAlert.show(
-        context: context,
-        type: QuickAlertType.error,
-        title: 'Load Error',
-        text: 'Failed to load the question. Please try again.',
-        confirmBtnColor: AppColors.green,
-      );
+      print("Error generating first question: $e");
     } finally {
       setState(() {
-        _isLoading = false;
+        _isLoadingQuestion = false;
       });
+
+      // Start generating additional questions in the background
+      _generateAdditionalQuestions();
     }
-  }
-
-  void _simulateProgress() {
-    Timer.periodic(Duration(milliseconds: 100), (timer) {
-      if (_loadingProgress < 90 && _isLoading) {
-        setState(() {
-          _loadingProgress += 5;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  void _onAnswerSelected(int index) async {
-    if (_isAnswerSelected || _isLoading) return;
-
-    setState(() {
-      _selectedAnswer = index;
-      _isAnswerSelected = true;
-    });
-
-    await _questMgr!.selectAnswer(_currentQuestionIndex, index);
-
-    setState(() {
-      _totalScore = _questMgr!.totalScore;
-    });
-  }
-
-  void _nextQuestion() async {
-    if (_currentQuestionIndex < (_questMgr?.questionCount ?? 0) - 1) {
-      setState(() {
-        _currentQuestionIndex++;
-        _isAnswerSelected = false;
-        _selectedAnswer = null;
-        _isLoading = true;
-        _simulateProgress();
-      });
-      await _loadQuestion();
-    } else {
-      _showQuizCompletedDialog();
-    }
-  }
-
-  Future<void> generateNewQuestions() async {
-    setState(() {
-      _isLoading = true;
-      _loadingProgress = 0.0;
-    });
-
-    await _questMgr?.generateNewQuestions(
-      5,
-      widget.difficultyLevel,
-      widget.selectedChapters,
-    );
-
-    setState(() {
-      _isLoading = false;
-      _loadingProgress = 100.0;
-    });
-
-    await _loadQuestion();
-  }
-
-  void _showQuizCompletedDialog() {
-    QuickAlert.show(
-      context: context,
-      animType: QuickAlertAnimType.slideInUp,
-      customAsset: 'assets/success.gif',
-      type: QuickAlertType.confirm,
-      title: 'Quiz Completed!',
-      text: 'Would you like to generate new questions or exit?',
-      confirmBtnText: 'Do More!',
-      cancelBtnText: 'Exit',
-      confirmBtnColor: AppColors.green,
-      onConfirmBtnTap: () {
-        Navigator.of(context).pop();
-        generateNewQuestions();
-      },
-      onCancelBtnTap: () {
-        Navigator.of(context).pop();
-      },
-    );
   }
 
   @override
@@ -218,101 +114,184 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('MCQ Quiz',
-            style: FontStyles.hometitle.copyWith(color: AppColors.white)),
+        title: Text(
+          'MCQ Quiz',
+          style: FontStyles.hometitle.copyWith(color: Colors.white),
+        ),
         backgroundColor: AppColors.green,
+        actions: [
+          // Stats Button to Navigate to Scores Screen
+          IconButton(
+            icon: Icon(
+              Icons.settings_suggest_rounded,
+              color: AppColors.white,
+            ),
+            onPressed: _openChapterAndDifficultySelection,
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.stacked_bar_chart_rounded,
+              color: AppColors.white,
+            ),
+            onPressed: _navigateToScoresScreen,
+          ),
+        ],
       ),
-      body: _isLoading && !_isScoresLoaded
-          ? Center(
-              child: WaveProgress(
-              borderColor: AppColors.black,
-              size: propHeight(200),
-              foregroundWaveColor: AppColors.green,
-              backgroundWaveColor: AppColors.gray,
-              progress: _loadingProgress,
-              innerPadding: propHeight(2),
-            ))
-          : _questMgr == null
-              ? Center(child: Text('Failed to load questions.'))
-              : _buildQuizContent(),
+      body: GestureDetector(
+        onHorizontalDragUpdate: (details) {
+          if (details.delta.dx > 0) {
+            // Swiping right (backward), move to previous page
+            if (_currentQuestionIndex > 0) {
+              _pageController.previousPage(
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          }
+          // Swiping left (forward), do nothing
+        },
+        child: PageView.builder(
+          controller: _pageController,
+          physics: NeverScrollableScrollPhysics(), // Disable default scrolling
+          itemCount:
+              _questions.length + 1, // Add extra page for skeleton loader
+          onPageChanged: (index) {
+            if (index == _questions.length) {
+              _loadMoreQuestions();
+            } else {
+              setState(() {
+                _currentQuestionIndex = index;
+                _isHelpVisible = false;
+              });
+            }
+          },
+          itemBuilder: (context, index) {
+            if (index == _questions.length) {
+              return _buildSkeletonLoader();
+            }
+            return _buildQuizContent(index);
+          },
+        ),
+      ),
     );
   }
 
-  Widget _buildQuizContent() {
-    return SingleChildScrollView(
-      physics: BouncingScrollPhysics(),
+  void _navigateToScoresScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ScoresScreen(
+          totalScore: _totalScore,
+          chapterScores: _chapterScores,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return Skeletonizer(
+      enabled: true,
+      child: Padding(
+        padding: EdgeInsets.all(propWidth(16)),
+        child: Column(
+          children: [
+            SizedBox(height: propHeight(20)),
+            Text('Loading Question...', style: FontStyles.hometitle),
+            SizedBox(height: propHeight(10)),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                color: Colors.grey[300],
+              ),
+              height: propHeight(200),
+              width: double.infinity,
+            ),
+            SizedBox(height: propHeight(24)),
+            for (var i = 0; i < 4; i++)
+              Container(
+                height: propHeight(50),
+                margin: EdgeInsets.symmetric(vertical: propHeight(8)),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[300],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuizContent(int index) {
+    return Padding(
       padding: EdgeInsets.symmetric(horizontal: propWidth(16)),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(height: propHeight(20)),
-          Text(
-            'Question ${_currentQuestionIndex + 1}:',
-            style: FontStyles.hometitle,
+          Center(
+            child: Text(
+              'Question ${index + 1}',
+              style: FontStyles.hometitle,
+              textAlign: TextAlign.center,
+            ),
           ),
           SizedBox(height: propHeight(10)),
-          FutureBuilder<String>(
-            future: _questMgr!.getQuestion(_currentQuestionIndex),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator();
-              } else if (snapshot.hasError) {
-                return Text('Error loading question');
-              } else if (snapshot.hasData) {
-                return Text(
-                  snapshot.data ?? 'No question available',
-                  style: FontStyles.sub,
-                  textAlign: TextAlign.center,
-                );
-              } else {
-                return Text('No question available');
-              }
-            },
-          ),
-          SizedBox(height: propHeight(24)),
-          ListView.builder(
-            shrinkWrap: true,
-            itemCount: _choices.length,
-            itemBuilder: (context, index) {
-              bool isCorrect =
-                  _isAnswerSelected && index == _correctAnswerIndex;
-              bool isSelected = index == _selectedAnswer;
-
-              Color containerColor = isCorrect
-                  ? AppColors.green
-                  : isSelected
-                      ? Colors.red.shade100
-                      : Colors.grey.shade200;
-
-              return GestureDetector(
-                onTap:
-                    _isAnswerSelected ? null : () => _onAnswerSelected(index),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: containerColor,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  margin: EdgeInsets.symmetric(vertical: 8),
-                  padding: EdgeInsets.all(12),
-                  child: Text(
-                    _choices[index],
-                    style: FontStyles.sub,
-                  ),
+          Container(
+            padding: EdgeInsets.all(propWidth(20)),
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: propHeight(5),
+                  offset: Offset(0, 2),
                 ),
-              );
-            },
+              ],
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Text(
+              _questions[index],
+              style: FontStyles.sub,
+              textAlign: TextAlign.center,
+            ),
           ),
           SizedBox(height: propHeight(24)),
-          _isAnswerSelected
-              ? ElevatedButton(
-                  onPressed: _nextQuestion,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.green,
+          Expanded(
+            child: ListView.builder(
+              itemCount: _choicesList[index].length,
+              itemBuilder: (context, choiceIndex) {
+                return GestureDetector(
+                  onTap: () => _onAnswerSelected(index, choiceIndex),
+                  child: Container(
+                    width: propWidth(250),
+                    margin: EdgeInsets.symmetric(vertical: propHeight(8)),
+                    padding: EdgeInsets.symmetric(
+                      vertical: propHeight(12),
+                      horizontal: propWidth(16),
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getChoiceColor(index, choiceIndex),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _choicesList[index][choiceIndex],
+                            style: FontStyles.sub,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Text('Next Question', style: FontStyles.button),
-                )
-              : Container(),
-          SizedBox(height: propHeight(24)),
-          // Help button to show/hide the help text
+                );
+              },
+            ),
+          ),
+          SizedBox(height: propHeight(20)),
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -322,89 +301,286 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.black,
             ),
-            child: Text(_isHelpVisible ? 'Hide Help' : 'Show Help',
-                style: FontStyles.button),
+            child: Text(
+              _isHelpVisible ? 'Hide Help' : 'Show Help',
+              style: FontStyles.button,
+            ),
           ),
-
-          // Display the help text if it's visible
           if (_isHelpVisible)
             Padding(
               padding: EdgeInsets.all(propHeight(16)),
-              child: Text(
-                _currentHelpText,
-                style: FontStyles.sub,
-                textAlign: TextAlign.center,
+              child: Container(
+                padding: EdgeInsets.all(propHeight(16)),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  color: AppColors.gray,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.help_outline_rounded, color: AppColors.black),
+                    SizedBox(width: propWidth(10)),
+                    Expanded(
+                      child: Text(
+                        _helpTexts[index],
+                        style: FontStyles.sub,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-
-          // Add a divider to separate the help text and the chapter scores.
-          Divider(
-            color: Colors.grey, // Adjust color as needed.
-            thickness: 1.0, // Adjust thickness as needed.
-            height: propHeight(24),
+          SizedBox(height: propHeight(25)),
+          ElevatedButton(
+            onPressed: () {
+              if (_currentQuestionIndex >= _questions.length - 1) {
+                _showCompletionDialog();
+              } else {
+                _pageController.nextPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.green,
+              padding: EdgeInsets.symmetric(vertical: propHeight(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text('Next Question', style: FontStyles.button),
           ),
-
-          // Chapter scores section
-          _isScoresLoaded ? Center(child: _buildChapterScores()) : Container(),
-          SizedBox(height: propHeight(24)),
-          Text('Total Score: $_totalScore', style: FontStyles.hometitleg),
+          SizedBox(height: propHeight(20)),
+          // Display Total Score
+          Text(
+            'Total Score: ${_totalScore.toStringAsFixed(2)}',
+            style: FontStyles.hometitle,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: propHeight(10)),
+          // Display Chapter Scores as Progress Bars
+          // _buildChapterScores(),
+          SizedBox(height: propHeight(10)),
         ],
       ),
     );
   }
 
-  Widget _buildChapterScores() {
-    if (_questMgr == null || _questMgr!.chapterScores.isEmpty) {
-      return Center(
-          child: Text('Fetching Chapter Scores As You Progress!',
-              style: FontStyles.sub));
+  // Widget _buildChapterScores() {
+  //   // Get the list of chapters the user has answered questions in
+  //   List<String> chaptersAnswered = _chapterScores.keys.toList();
+  //   if (chaptersAnswered.isEmpty) {
+  //     return Container(); // Return empty container if no chapters answered yet
+  //   }
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         'Chapter Scores:',
+  //         style: FontStyles.hometitle,
+  //         textAlign: TextAlign.left,
+  //       ),
+  //       SizedBox(height: propHeight(10)),
+  //       ListView.builder(
+  //         shrinkWrap: true,
+  //         physics: NeverScrollableScrollPhysics(),
+  //         itemCount: chaptersAnswered.length,
+  //         itemBuilder: (context, index) {
+  //           String chapter = chaptersAnswered[index];
+  //           double score = _chapterScores[chapter] ?? 0.0;
+  //           return Padding(
+  //             padding: EdgeInsets.symmetric(vertical: propHeight(5)),
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(
+  //                   'Chapter $chapter',
+  //                   style: FontStyles.sub,
+  //                 ),
+  //                 SizedBox(height: propHeight(5)),
+  //                 LinearProgressIndicator(
+  //                   value: (score % 1.0),
+  //                   backgroundColor: AppColors.gray,
+  //                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
+  //                 ),
+  //                 SizedBox(height: propHeight(5)),
+  //                 Text(
+  //                   'Score: ${score.toStringAsFixed(2)}',
+  //                   style: FontStyles.sub,
+  //                 ),
+  //               ],
+  //             ),
+  //           );
+  //         },
+  //       ),
+  //     ],
+  //   );
+  // }
+
+  Color _getChoiceColor(int questionIndex, int choiceIndex) {
+    if (_answeredQuestions[questionIndex] &&
+        choiceIndex == _correctAnswers[questionIndex]) {
+      return AppColors.green;
+    } else if (_answeredQuestions[questionIndex] &&
+        choiceIndex == _selectedAnswers[questionIndex]) {
+      return Colors.red.shade100;
     }
+    return Colors.grey.shade200;
+  }
 
-    var filteredScores = _questMgr!.chapterScores.entries
-        .where((entry) => entry.value > 0)
-        .toList();
+  // Ensure to update _onAnswerSelected to keep scores updated
+  void _onAnswerSelected(int questionIndex, int answerIndex) async {
+    if (_answeredQuestions[questionIndex]) return;
 
-    if (filteredScores.isEmpty) {
-      return Center(
-          child: Text('Fetching Chapter Scores As You Progress!',
-              style: FontStyles.sub));
+    setState(() {
+      _selectedAnswers[questionIndex] = answerIndex;
+      _answeredQuestions[questionIndex] = true;
+      _questMgr?.selectAnswer(questionIndex, answerIndex);
+
+      // Update total score and chapter scores
+      _totalScore = _questMgr?.totalScore ?? 0.0;
+      _chapterScores = Map<String, double>.from(_questMgr?.chapterScores ?? {});
+    });
+
+    // Get the chapter of the answered question
+    int chapter = await _questMgr?.getQuestionChapter(questionIndex) ?? -1;
+    if (chapter != -1 && !_coveredChapters.contains(chapter)) {
+      setState(() {
+        _coveredChapters.add(chapter);
+      });
     }
+  }
 
-    double maxScore =
-        filteredScores.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+  Future<void> _generateAdditionalQuestions() async {
+    try {
+      // Determine the list of uncovered chapters
+      List<int> uncoveredChapters = _selectedChapters
+          .where((chapter) => !_coveredChapters.contains(chapter))
+          .toList();
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: filteredScores.map((entry) {
-          double score = entry.value;
-          double barWidth = (score / maxScore) * propWidth(200);
-          barWidth = barWidth.isNaN ? 0 : barWidth;
+      // If all chapters have been covered, reset the covered chapters to start over
+      if (uncoveredChapters.isEmpty) {
+        setState(() {
+          _coveredChapters.clear();
+          uncoveredChapters = List.from(_selectedChapters);
+        });
+      }
 
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: propHeight(4)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center, // Center the row
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text('Chap ${entry.key}', style: FontStyles.sub),
-                SizedBox(width: propWidth(10)),
-                Container(
-                  height: propHeight(10),
-                  width: barWidth,
-                  decoration: BoxDecoration(
-                    color: AppColors.green,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                ),
-                SizedBox(width: propWidth(10)),
-                Text('${score.toStringAsFixed(2)}', style: FontStyles.sub),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+      await _questMgr!.generateNewQuestions(
+        uncoveredChapters.length,
+        _difficultyLevel.toInt(),
+        uncoveredChapters,
+      );
+    } catch (e) {
+      print("Error generating additional questions: $e");
+    }
+  }
+
+  Future<void> _loadMoreQuestions() async {
+    setState(() {
+      _isLoadingQuestion = true;
+    });
+
+    // Generate new questions for uncovered chapters
+    await _generateAdditionalQuestions();
+
+    // Load the new questions into the UI lists
+    await _loadQuestionsFromIndex(_questions.length);
+
+    setState(() {
+      _isLoadingQuestion = false;
+    });
+  }
+
+  void _showCompletionDialog() {
+    QuickAlert.show(
+      context: context,
+      type: QuickAlertType.success,
+      title: 'All Questions Completed!',
+      text: 'Would you like to attempt more questions?',
+      confirmBtnText: 'Do More!',
+      onConfirmBtnTap: () {
+        Navigator.of(context).pop();
+        _loadMoreQuestions();
+      },
+      confirmBtnColor: AppColors.green,
     );
+  }
+
+  void _openChapterAndDifficultySelection() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Select Chapters & Difficulty'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: List.generate(15, (index) {
+                  return ChoiceChip(
+                    label: Text('Chapter ${index + 1}'),
+                    selected: _selectedChapters.contains(index + 1),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedChapters.add(index + 1);
+                        } else {
+                          _selectedChapters.remove(index + 1);
+                        }
+                      });
+                    },
+                  );
+                }),
+              ),
+              SizedBox(height: 20),
+              Text('Difficulty Level: ${_difficultyLevel.toInt()}'),
+              Slider(
+                value: _difficultyLevel,
+                min: 1,
+                max: 10,
+                divisions: 9,
+                label: _difficultyLevel.round().toString(),
+                onChanged: (value) {
+                  setState(() {
+                    _difficultyLevel = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Save', style: TextStyle(color: AppColors.green)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class OnlyAllowBackwardScrollPhysics extends ScrollPhysics {
+  const OnlyAllowBackwardScrollPhysics({super.parent});
+
+  @override
+  OnlyAllowBackwardScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return OnlyAllowBackwardScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  double applyBoundaryConditions(ScrollMetrics position, double value) {
+    // If trying to scroll forward (value > position.pixels), prevent it.
+    if (value > position.pixels) {
+      return value - position.pixels; // Disallow forward scroll
+    }
+    // Allow backward scroll
+    return 0.0;
   }
 }

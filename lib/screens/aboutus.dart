@@ -5,7 +5,7 @@ import 'package:edumentor/asset-class/fonts.dart';
 import 'package:edumentor/asset-class/size_config.dart';
 
 class AboutUsPage extends StatelessWidget {
-  AboutUsPage({super.key});
+  const AboutUsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
