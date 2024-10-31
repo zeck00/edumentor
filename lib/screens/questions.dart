@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:edumentor/screens/scores.dart';
 import 'package:flutter/material.dart';
-import 'package:edumentor/services/manager.dart'; // Your QuestMgr class
-import 'package:edumentor/asset-class/colors.dart'; // Your color definitions
-import 'package:edumentor/asset-class/fonts.dart'; // Your font styles
+import 'package:edumentor/screens/scores.dart'; // Scores Class
+import 'package:edumentor/services/manager.dart'; // QuestMgr class
+import 'package:edumentor/asset-class/colors.dart'; // Color definitions
+import 'package:edumentor/asset-class/fonts.dart'; // Font styles
 import 'package:edumentor/asset-class/size_config.dart'; // Size configuration
 import 'package:quickalert/quickalert.dart'; // Alert dialogs
 import 'package:skeletonizer/skeletonizer.dart'; // Loading skeletons
@@ -28,7 +28,6 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   List<int?> _selectedAnswers = [];
   List<bool> _answeredQuestions = [];
   List<String> _helpTexts = [];
-
   double _difficultyLevel = 1.0;
   List<int> _selectedChapters = List.generate(15, (index) => index + 1);
   double _totalScore = 0.0;
@@ -42,8 +41,47 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
 
   Future<void> _initializeQuiz() async {
     await _initializeQuestMgr();
-    await _generateFirstQuestion();
-    await _loadQuestionsFromIndex(1);
+    await _loadUnansweredQuestions();
+  }
+
+  Future<void> _loadUnansweredQuestions() async {
+    setState(() {
+      _isLoadingQuestion = true;
+    });
+
+    try {
+      int totalQuestions = _questMgr!.totalQuestions; // Use the getter
+      for (int i = 0; i < totalQuestions; i++) {
+        bool isRead = _questMgr!.isQuestionRead(i); // Use the public method
+        if (!isRead) {
+          final question = await _questMgr!.getQuestion(i);
+          final choices = await _questMgr!.getChoices(i);
+          final correctAnswer = await _questMgr!.getCorrectAnswerIndex(i);
+          final helpText = await _questMgr!.getQuestionHelp(i);
+
+          setState(() {
+            _questions.add(question);
+            _choicesList.add(choices);
+            _correctAnswers.add(correctAnswer);
+            _helpTexts.add(helpText);
+            _answeredQuestions.add(false);
+            _selectedAnswers.add(null);
+          });
+        }
+      }
+
+      // If no unanswered questions, generate new ones
+      if (_questions.isEmpty) {
+        await _generateAdditionalQuestions();
+        await _loadUnansweredQuestions(); // Reload after generating
+      }
+    } catch (e) {
+      print("Error loading unanswered questions: $e");
+    } finally {
+      setState(() {
+        _isLoadingQuestion = false;
+      });
+    }
   }
 
   Future<void> _initializeQuestMgr() async {
@@ -76,37 +114,37 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     }
   }
 
-  Future<void> _generateFirstQuestion() async {
-    setState(() {
-      _isLoadingQuestion = true;
-    });
+  // Future<void> _generateFirstQuestion() async {
+  //   setState(() {
+  //     _isLoadingQuestion = true;
+  //   });
 
-    try {
-      final question = await _questMgr!.getQuestion(_currentQuestionIndex);
-      final choices = await _questMgr!.getChoices(_currentQuestionIndex);
-      final correctAnswer =
-          await _questMgr!.getCorrectAnswerIndex(_currentQuestionIndex);
-      final helpText = await _questMgr!.getQuestionHelp(_currentQuestionIndex);
+  //   try {
+  //     final question = await _questMgr!.getQuestion(_currentQuestionIndex);
+  //     final choices = await _questMgr!.getChoices(_currentQuestionIndex);
+  //     final correctAnswer =
+  //         await _questMgr!.getCorrectAnswerIndex(_currentQuestionIndex);
+  //     final helpText = await _questMgr!.getQuestionHelp(_currentQuestionIndex);
 
-      setState(() {
-        _questions.add(question);
-        _choicesList.add(choices);
-        _correctAnswers.add(correctAnswer);
-        _helpTexts.add(helpText);
-        _answeredQuestions.add(false);
-        _selectedAnswers.add(null);
-      });
-    } catch (e) {
-      print("Error generating first question: $e");
-    } finally {
-      setState(() {
-        _isLoadingQuestion = false;
-      });
+  //     setState(() {
+  //       _questions.add(question);
+  //       _choicesList.add(choices);
+  //       _correctAnswers.add(correctAnswer);
+  //       _helpTexts.add(helpText);
+  //       _answeredQuestions.add(false);
+  //       _selectedAnswers.add(null);
+  //     });
+  //   } catch (e) {
+  //     print("Error generating first question: $e");
+  //   } finally {
+  //     setState(() {
+  //       _isLoadingQuestion = false;
+  //     });
 
-      // Start generating additional questions in the background
-      _generateAdditionalQuestions();
-    }
-  }
+  //     // Start generating additional questions in the background
+  //     _generateAdditionalQuestions();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -392,12 +430,22 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       _chapterScores = Map<String, double>.from(_questMgr?.chapterScores ?? {});
     });
 
-    // Get the chapter of the answered question
-    int chapter = await _questMgr?.getQuestionChapter(questionIndex) ?? -1;
+    // Get the chapter of the answered question using the public method
+    int chapter = _questMgr!.getQuestionChapter(questionIndex);
     if (chapter != -1 && !_coveredChapters.contains(chapter)) {
       setState(() {
         _coveredChapters.add(chapter);
       });
+    }
+
+    // Optionally, navigate to the next question automatically
+    if (_currentQuestionIndex < _questions.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _showCompletionDialog();
     }
   }
 
@@ -435,7 +483,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     await _generateAdditionalQuestions();
 
     // Load the new questions into the UI lists
-    await _loadQuestionsFromIndex(_questions.length);
+    await _loadUnansweredQuestions();
 
     setState(() {
       _isLoadingQuestion = false;
@@ -458,57 +506,104 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   }
 
   void _openChapterAndDifficultySelection() {
+    // Temporary variables to hold selections
+    List<int> tempSelectedChapters = List.from(_selectedChapters);
+    double tempDifficultyLevel = _difficultyLevel;
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Select Chapters & Difficulty'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: List.generate(15, (index) {
-                  return ChoiceChip(
-                    label: Text('Chapter ${index + 1}'),
-                    selected: _selectedChapters.contains(index + 1),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _selectedChapters.add(index + 1);
-                        } else {
-                          _selectedChapters.remove(index + 1);
-                        }
-                      });
-                    },
-                  );
-                }),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Select Chapters & Difficulty'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: List.generate(15, (index) {
+                        return ChoiceChip(
+                          label: Text('Chapter ${index + 1}'),
+                          selected: tempSelectedChapters.contains(index + 1),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                tempSelectedChapters.add(index + 1);
+                              } else {
+                                tempSelectedChapters.remove(index + 1);
+                              }
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                    SizedBox(height: 20),
+                    Text('Difficulty Level: ${tempDifficultyLevel.toInt()}'),
+                    Slider(
+                      value: tempDifficultyLevel,
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      label: tempDifficultyLevel.round().toString(),
+                      onChanged: (value) {
+                        setState(() {
+                          tempDifficultyLevel = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
-              SizedBox(height: 20),
-              Text('Difficulty Level: ${_difficultyLevel.toInt()}'),
-              Slider(
-                value: _difficultyLevel,
-                min: 1,
-                max: 10,
-                divisions: 9,
-                label: _difficultyLevel.round().toString(),
-                onChanged: (value) {
-                  setState(() {
-                    _difficultyLevel = value;
-                  });
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Save', style: TextStyle(color: AppColors.green)),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    if (tempSelectedChapters.isEmpty) {
+                      QuickAlert.show(
+                        context: context,
+                        type: QuickAlertType.error,
+                        text: 'Please select at least one chapter.',
+                        confirmBtnColor: AppColors.green,
+                      );
+                      return;
+                    }
+
+                    // Update local selections
+                    setState(() {
+                      _selectedChapters = tempSelectedChapters;
+                      _difficultyLevel = tempDifficultyLevel;
+                      _currentQuestionIndex = 0; // Reset to first question
+                      _pageController
+                          .jumpToPage(0); // Navigate to first question
+                      _questions.clear();
+                      _choicesList.clear();
+                      _correctAnswers.clear();
+                      _selectedAnswers.clear();
+                      _answeredQuestions.clear();
+                      _helpTexts.clear();
+                      _totalScore = 0.0;
+                      _chapterScores.clear();
+                    });
+
+                    // Generate new questions based on selected chapters and difficulty
+                    await _questMgr!.generateNewQuestions(
+                      5, // Number of new questions to generate
+                      _difficultyLevel.toInt(),
+                      _selectedChapters,
+                    );
+
+                    // Load the newly generated unanswered questions
+                    await _loadUnansweredQuestions();
+
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Save', style: TextStyle(color: AppColors.green)),
+                ),
+              ],
+            );
+          },
         );
       },
     );

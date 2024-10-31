@@ -7,7 +7,6 @@ import 'generator.dart';
 class QuestMgr {
   static QuestMgr? _instance;
   static bool _isCreating = false;
-
   double _totalScore = 0.0;
   int _questionCount = 0;
   List<Map<String, dynamic>> _questionsData = [];
@@ -169,6 +168,7 @@ class QuestMgr {
 
   double get totalScore => _totalScore;
   int get questionCount => _questionCount;
+  int get totalQuestions => _questionsData.length;
 
   void dispose() {
     _questionStreamController.close();
@@ -178,9 +178,35 @@ class QuestMgr {
     return _questionsData.where((q) => q['read'] != true).length;
   }
 
-  Future<int> getQuestionChapter(int index) async {
-    if (index >= _questionsData.length) return -1;
-    return int.tryParse(_questionsData[index]['chapter']?.toString() ?? '-1') ??
-        -1;
+  // Public method to get the chapter number of a question
+  int getQuestionChapter(int index) {
+    if (index >= 0 && index < _questionsData.length) {
+      return int.tryParse(
+              _questionsData[index]['chapter']?.toString() ?? '-1') ??
+          -1;
+    }
+    return -1;
+  }
+
+  Future<void> resetQuiz({
+    required List<int> selectedChapters,
+    required int difficulty,
+  }) async {
+    _totalScore = 0.0;
+    chapterScores.clear();
+    _selectedAnswers.clear();
+    _questionsData.clear();
+    _questionCount = 0;
+
+    // Generate new questions based on selected chapters
+    await generateNewQuestions(5, difficulty, selectedChapters);
+  }
+
+  // Public method to check if a question has been read
+  bool isQuestionRead(int index) {
+    if (index >= 0 && index < _questionsData.length) {
+      return _questionsData[index]['read'] ?? false;
+    }
+    return false;
   }
 }
