@@ -367,57 +367,6 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     );
   }
 
-  // Widget _buildChapterScores() {
-  //   // Get the list of chapters the user has answered questions in
-  //   List<String> chaptersAnswered = _chapterScores.keys.toList();
-  //   if (chaptersAnswered.isEmpty) {
-  //     return Container(); // Return empty container if no chapters answered yet
-  //   }
-  //   return Column(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Text(
-  //         'Chapter Scores:',
-  //         style: FontStyles.hometitle,
-  //         textAlign: TextAlign.left,
-  //       ),
-  //       SizedBox(height: propHeight(10)),
-  //       ListView.builder(
-  //         shrinkWrap: true,
-  //         physics: NeverScrollableScrollPhysics(),
-  //         itemCount: chaptersAnswered.length,
-  //         itemBuilder: (context, index) {
-  //           String chapter = chaptersAnswered[index];
-  //           double score = _chapterScores[chapter] ?? 0.0;
-  //           return Padding(
-  //             padding: EdgeInsets.symmetric(vertical: propHeight(5)),
-  //             child: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 Text(
-  //                   'Chapter $chapter',
-  //                   style: FontStyles.sub,
-  //                 ),
-  //                 SizedBox(height: propHeight(5)),
-  //                 LinearProgressIndicator(
-  //                   value: (score % 1.0),
-  //                   backgroundColor: AppColors.gray,
-  //                   valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
-  //                 ),
-  //                 SizedBox(height: propHeight(5)),
-  //                 Text(
-  //                   'Score: ${score.toStringAsFixed(2)}',
-  //                   style: FontStyles.sub,
-  //                 ),
-  //               ],
-  //             ),
-  //           );
-  //         },
-  //       ),
-  //     ],
-  //   );
-  // }
-
   Color _getChoiceColor(int questionIndex, int choiceIndex) {
     if (_answeredQuestions[questionIndex] &&
         choiceIndex == _correctAnswers[questionIndex]) {
