@@ -10,8 +10,8 @@ class ScoresScreen extends StatelessWidget {
   const ScoresScreen({
     required this.totalScore,
     required this.chapterScores,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
