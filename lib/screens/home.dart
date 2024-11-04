@@ -1,7 +1,9 @@
 import 'package:edumentor/screens/aboutus.dart';
 import 'package:edumentor/screens/chapters.dart';
 import 'package:edumentor/screens/course.dart';
+import 'package:edumentor/screens/profile.dart';
 import 'package:edumentor/screens/questions.dart';
+import 'package:edumentor/screens/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
@@ -50,7 +52,12 @@ class _HomePageState extends State<HomePage> {
                     ),
                     InkWell(
                       onTap: () {
-                        // Handle profile tap
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfilePage(),
+                          ),
+                        );
                       },
                       child: CircleAvatar(
                         radius: propWidth(22.5),
@@ -140,7 +147,16 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("EduMentor AI", style: FontStyles.hometitle),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(text: 'Edu', style: FontStyles.hometitle),
+                            TextSpan(
+                                text: 'Mentor', style: FontStyles.hometitleg),
+                            TextSpan(text: ' AI', style: FontStyles.hometitle),
+                          ],
+                        ),
+                      ),
                       SvgPicture.asset(
                         'assets/g-next.svg',
                         height: propHeight(30),
@@ -211,7 +227,7 @@ class _HomePageState extends State<HomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => AboutUsPage(),
+                            builder: (context) => SettingsPage(),
                           ),
                         );
                       },

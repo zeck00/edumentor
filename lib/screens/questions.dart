@@ -820,7 +820,11 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.remove_red_eye_rounded, color: Colors.white),
+            Icon(
+              Icons.remove_red_eye_rounded,
+              color: Colors.white,
+              size: propWidth(90),
+            ),
             Text(
               '$_countdown',
               style: FontStyles.hometitle.copyWith(
