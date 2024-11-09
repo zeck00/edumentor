@@ -176,7 +176,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
-                  child: _customCard('assets/EduMentor.png'),
+                  child: _customCard('assets/1.png'),
                 ),
                 SizedBox(height: propHeight(20)),
 
@@ -213,7 +213,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
-                  child: _customCard('assets/CourseMaterial.png'),
+                  child: _customCard('assets/2.png'),
                 ),
                 SizedBox(height: propHeight(30)),
 

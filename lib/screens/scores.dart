@@ -5,7 +5,7 @@ import 'package:edumentor/asset-class/size_config.dart'; // Size configuration
 
 class ScoresScreen extends StatelessWidget {
   final double totalScore;
-  final Map<String, double> chapterScores;
+  final Map<int, double> chapterScores;
 
   const ScoresScreen({
     required this.totalScore,
@@ -53,7 +53,7 @@ class ScoresScreen extends StatelessWidget {
   }
 
   Widget _buildChapterScores() {
-    List<String> chaptersAnswered = chapterScores.keys.toList();
+    List<int> chaptersAnswered = chapterScores.keys.toList();
     if (chaptersAnswered.isEmpty) {
       return Center(
         child: Text(
@@ -63,10 +63,12 @@ class ScoresScreen extends StatelessWidget {
       );
     }
 
+    chaptersAnswered.sort(); // Sort the chapters numerically
+
     return ListView.builder(
       itemCount: chaptersAnswered.length,
       itemBuilder: (context, index) {
-        String chapter = chaptersAnswered[index];
+        int chapter = chaptersAnswered[index];
         double score = chapterScores[chapter] ?? 0.0;
         return Padding(
           padding: EdgeInsets.symmetric(vertical: propHeight(5)),
@@ -79,7 +81,7 @@ class ScoresScreen extends StatelessWidget {
               ),
               SizedBox(height: propHeight(5)),
               LinearProgressIndicator(
-                value: score % 1.0, // Adjust max score as per your logic
+                value: score % 1.0, // Adjust as per your scoring logic
                 backgroundColor: AppColors.gray,
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
               ),

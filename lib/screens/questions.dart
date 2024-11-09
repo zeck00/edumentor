@@ -31,9 +31,10 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   double _difficultyLevel = 1.0;
   List<int> _selectedChapters = List.generate(15, (index) => index + 1);
   double _totalScore = 0.0;
-  Map<String, double> _chapterScores = {};
+  Map<int, double> _chapterScores = {};
   bool _isCountdownVisible = false;
   int _countdown = 10;
+  List<String> _questionIds = [];
 
   @override
   void initState() {
@@ -58,27 +59,23 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       _isLoadingQuestion = true;
     });
     try {
-      int totalQuestions = _questMgr!.totalQuestions;
-      for (int i = 0; i < totalQuestions; i++) {
-        bool isRead = _questMgr!.isQuestionRead(i);
-        if (!isRead) {
-          final question = await _questMgr!.getQuestion(i);
-          final choices = await _questMgr!.getChoices(i);
-          final correctAnswer = await _questMgr!.getCorrectAnswerIndex(i);
-          final helpText = await _questMgr!.getQuestionHelp(i);
-          setState(() {
-            _questions.add(question);
-            _choicesList.add(choices);
-            _correctAnswers.add(correctAnswer);
-            _helpTexts.add(helpText);
-            _answeredQuestions.add(false);
-            _selectedAnswers.add(null);
-          });
-        }
-      }
-      if (_questions.isEmpty) {
+      List<Map<String, dynamic>> unansweredQuestions =
+          _questMgr!.getUnansweredQuestions();
+
+      if (unansweredQuestions.isEmpty) {
         await _generateAdditionalQuestions();
-        await _loadUnansweredQuestions();
+        unansweredQuestions = _questMgr!.getUnansweredQuestions();
+      }
+
+      for (var questionData in unansweredQuestions) {
+        _questions.add(questionData['question']);
+        _choicesList.add(List<String>.from(questionData['choices']));
+        _correctAnswers.add(questionData['correct']);
+        _helpTexts.add(questionData['help']);
+        _answeredQuestions.add(false);
+        _selectedAnswers.add(null);
+        // Store question IDs for reference
+        _questionIds.add(questionData['id']);
       }
     } catch (e) {
       print("Error loading unanswered questions: $e");
@@ -175,9 +172,10 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       title: 'All Questions Completed!',
       text: 'Would you like to attempt more questions?',
       confirmBtnText: 'Do More!',
-      onConfirmBtnTap: () {
+      onConfirmBtnTap: () async {
         Navigator.of(context).pop();
-        _startCountdown();
+        _loadMoreQuestions(); // Load new questions immediately
+        _startCountdown(); // Start eye protection countdown
       },
       confirmBtnColor: AppColors.green,
     );
@@ -193,7 +191,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
         if (_countdown == 0) {
           _isCountdownVisible = false;
           timer.cancel();
-          _loadMoreQuestions();
+          // No need to call _loadMoreQuestions() here
         } else {
           _countdown--;
         }
@@ -436,11 +434,13 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     setState(() {
       _selectedAnswers[questionIndex] = answerIndex;
       _answeredQuestions[questionIndex] = true;
-      _questMgr?.selectAnswer(questionIndex, answerIndex);
+      String questionId = _questionIds[questionIndex];
+      _questMgr?.selectAnswerById(questionId, answerIndex);
       _totalScore = _questMgr?.totalScore ?? 0.0;
-      _chapterScores = Map<String, double>.from(_questMgr?.chapterScores ?? {});
+      _chapterScores = Map<int, double>.from(_questMgr?.chapterScores ?? {});
     });
-    int chapter = _questMgr!.getQuestionChapter(questionIndex);
+    int chapter =
+        _questMgr!.getQuestionChapterById(_questionIds[questionIndex]);
     if (chapter != -1 && !_coveredChapters.contains(chapter)) {
       setState(() {
         _coveredChapters.add(chapter);
@@ -459,6 +459,16 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   Future<void> _loadMoreQuestions() async {
     setState(() {
       _isLoadingQuestion = true;
+      // Reset quiz state
+      _currentQuestionIndex = 0;
+      _questions.clear();
+      _choicesList.clear();
+      _correctAnswers.clear();
+      _selectedAnswers.clear();
+      _answeredQuestions.clear();
+      _helpTexts.clear();
+      _coveredChapters.clear();
+      _pageController.jumpToPage(0);
     });
     await _generateAdditionalQuestions();
     await _loadUnansweredQuestions();

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:edumentor/const.dart';
+import 'package:edumentor/services/history_manager.dart';
 
 class GPTQuestionGenerator {
   // Generates a question based on user score, progress, and chapter context.
@@ -12,6 +13,10 @@ class GPTQuestionGenerator {
     String worstChapter,
     int chapterNo,
   ) async {
+    // Get question history
+    final List<String> questionHistory =
+        await QuestionHistoryManager.getQuestionHistory();
+
     final String prompt = createDynamicPrompt(
       difficulty,
       score,
@@ -19,6 +24,7 @@ class GPTQuestionGenerator {
       bestChapter,
       worstChapter,
       chapterNo,
+      questionHistory,
     );
 
     // API request body
@@ -73,67 +79,81 @@ class GPTQuestionGenerator {
     String bestChapter,
     String worstChapter,
     int chapterNo,
+    List<String> questionHistory,
   ) {
-    print("Generating question for chapter: $chapterNo");
+    String historyContext = '';
+    if (questionHistory.isNotEmpty) {
+      historyContext =
+          '\nRecently asked questions (DO NOT REPEAT THESE):\n${questionHistory.map((q) => '- $q').join('\n')}';
+    }
 
     return '''
-    Generate a multiple-choice question for a student in health sciences and nutrition focusing on the chapter: $chapterNo.
+Generate a multiple-choice question for a student in health sciences and nutrition focusing on the chapter: $chapterNo.
 
-    The student's best-performing chapter is: $bestChapter.
-    The student's weakest-performing chapter is: $worstChapter.
-    The student's chosen practice chapters are: $chapterNo.
-    Current score: $score. Questions answered so far: $numAnswered.
+STUDENT CONTEXT:
+- Current Chapter Focus: $chapterNo
+- Performance Level: ${(score / (numAnswered == 0 ? 1 : numAnswered)).toStringAsFixed(2)} avg score
+- Questions Completed: $numAnswered
+- Strongest Chapter: $bestChapter
+- Weakest Chapter: $worstChapter
+- Required Difficulty: $difficulty/10
 
-    Chapters:
-    1. Basic Nutritional Concepts (macronutrients, micronutrients, and energy balance)
-    2. Digestion and Absorption (nutrient absorption processes, GI tract roles)
-    3. Carbohydrates (types of carbohydrates, fiber, digestion)
-    4. Lipids (fatty acids, cholesterol, health implications)
-    5. Proteins (essential and non-essential amino acids, protein digestion)
-    6. Vitamins and Minerals (water- and fat-soluble vitamins, deficiency diseases)
-    7. Energy Metabolism (energy requirements, metabolism regulation)
-    8. Weight Management (obesity, energy expenditure, diet strategies)
-    9. Physical Fitness (exercise benefits, guidelines, physical activity)
-    10. Diabetes Mellitus (types, symptoms, treatment, glycemic control)
-    11. Cardiovascular Diseases (hypertension, heart disease risk factors, DASH diet)
-    12. Overweight and Obesity (BMI, types of obesity, treatment strategies)
-    13. Eating Disorders (anorexia, bulimia, pica, binge eating)
-    14. Water and Fluid Balance (hydration, electrolyte balance)
-    15. Nutrition in Special Populations (pregnancy, elderly, athletes).
+Chapters:
+1. Basic Nutritional Concepts (macronutrients, micronutrients, and energy balance)
+2. Digestion and Absorption (nutrient absorption processes, GI tract roles)
+3. Carbohydrates (types of carbohydrates, fiber, digestion)
+4. Lipids (fatty acids, cholesterol, health implications)
+5. Proteins (essential and non-essential amino acids, protein digestion)
+6. Vitamins and Minerals (water- and fat-soluble vitamins, deficiency diseases)
+7. Energy Metabolism (energy requirements, metabolism regulation)
+8. Weight Management (obesity, energy expenditure, diet strategies)
+9. Physical Fitness (exercise benefits, guidelines, physical activity)
+10. Diabetes Mellitus (types, symptoms, treatment, glycemic control)
+11. Cardiovascular Diseases (hypertension, heart disease risk factors, DASH diet)
+12. Overweight and Obesity (BMI, types of obesity, treatment strategies)
+13. Eating Disorders (anorexia, bulimia, pica, binge eating)
+14. Water and Fluid Balance (hydration, electrolyte balance)
+15. Nutrition in Special Populations (pregnancy, elderly, athletes).
 
-    Please provide:
-    - A question related to one of the chapters above (focus on $chapterNo and $worstChapter).
-    - Four multiple-choice answers, with each answer being scored based on its closeness to the correct answer: 1 (correct), 0.75 (closely related), 0.5 (somewhat related), and 0.25 (incorrect).
-    - The correct answer's index (0-based).
-    - The chapter of the question.
-    - A brief help explanation of why the correct answer is right and guides the student to the correct answer.
+$historyContext
 
-      Example:
-      Question: Which vitamin is essential for calcium absorption in the body?
-      Choices: Vitamin A, Vitamin D, Vitamin C, Vitamin B12
-      Points: 0.25, 1, 0.5, 0.25
-      Correct: 1
-      Chapter: 6
-      Help: Vitamin D helps the body absorb calcium, which is crucial for bone health.
-    ''';
+Please provide:
+- A question related to one of the chapters above (focus on $chapterNo and $worstChapter).
+- Four multiple-choice answers, **without labels or points embedded**, separated by commas.
+- A separate list of points corresponding to each choice, in the same order, separated by commas.
+  - Use the following point values: 1 (correct), 0.75 (closely related), 0.5 (somewhat related), 0.25 (incorrect).
+- The index of the correct answer (0-based).
+- The chapter of the question.
+- A brief help explanation of why the correct answer is right and guides the student to the correct answer.
+
+Example:
+Question: Which vitamin is essential for calcium absorption in the body?
+Choices: Vitamin A, Vitamin D, Vitamin C, Vitamin B12
+Points: 0.25, 1, 0.5, 0.25
+Correct: 1
+Chapter: 6
+Help: Vitamin D helps the body absorb calcium, which is crucial for bone health.
+
+Please provide a NEW question that has not been asked before. Ensure that the question is not similar to any of the recently asked questions provided above.
+''';
   }
 
   Map<String, dynamic> _parseGeneratedQuestion(String content) {
     try {
       // Clean up content by removing ** and extra whitespace.
-      content = content.replaceAll(RegExp(r'\*\*|\n|\r'), ' ').trim();
+      content = content.replaceAll(RegExp(r'\*\*'), '').trim();
       print('Cleaned Content: $content');
 
-      // Define regex patterns with ** markers as section delimiters.
+      // Define regex patterns.
       final questionRegex =
-          RegExp(r'Question:\s*(.*?)\s*Choices:', dotAll: true);
+          RegExp(r'Question:\s*(.*?)\s*(Choices:|$)', dotAll: true);
       final choicesRegex =
-          RegExp(r'Choices:\s*([\s\S]*?)\s*Points:', dotAll: true);
+          RegExp(r'Choices:\s*(.*?)\s*(Points:|$)', dotAll: true);
       final pointsRegex =
-          RegExp(r'Points:\s*([\s\S]*?)\s*Correct:', dotAll: true);
+          RegExp(r'Points:\s*(.*?)\s*(Correct:|$)', dotAll: true);
       final correctRegex = RegExp(r'Correct:\s*(\d+)', dotAll: true);
       final chapterRegex = RegExp(r'Chapter:\s*(\d+)', dotAll: true);
-      final helpRegex = RegExp(r'Help:\s*(.*?)$', dotAll: true);
+      final helpRegex = RegExp(r'Help:\s*(.*)', dotAll: true);
 
       // Match each section with error checking.
       final questionMatch = questionRegex.firstMatch(content);
@@ -156,15 +176,13 @@ class GPTQuestionGenerator {
       // Extract question, help, chapter, and correct answer index.
       String question = questionMatch.group(1)!.trim();
       String help = helpMatch.group(1)!.trim();
-      int chapter =
-          int.parse(chapterMatch.group(1)!.trim()); // Ensure chapter is an int
-      int correct = int.parse(
-          correctMatch.group(1)!.trim()); // Ensure correct answer is an int
+      int chapter = int.parse(chapterMatch.group(1)!.trim());
+      int correct = int.parse(correctMatch.group(1)!.trim());
 
       // Extract and clean up choices.
       List<String> choices = choicesMatch
           .group(1)!
-          .split(RegExp(r'\s*\d+\.\s*|\s*[A-Z]\)\s*|,'))
+          .split(RegExp(r',\s*'))
           .map((choice) => choice.trim())
           .where((choice) => choice.isNotEmpty)
           .toList();
@@ -172,7 +190,7 @@ class GPTQuestionGenerator {
       // Parse points and validate lengths.
       List<double> points = pointsMatch
           .group(1)!
-          .split(RegExp(r'[\s,]+'))
+          .split(RegExp(r',\s*'))
           .map((p) => double.tryParse(p.trim()) ?? 0.0)
           .toList();
 
@@ -187,8 +205,8 @@ class GPTQuestionGenerator {
         'question': question,
         'choices': choices,
         'points': points,
-        'correct': correct, // Cast as integer
-        'chapter': chapter, // Cast as integer
+        'correct': correct,
+        'chapter': chapter,
         'help': help,
       };
     } catch (e) {

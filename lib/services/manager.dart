@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'generator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'history_manager.dart';
+import 'package:uuid/uuid.dart';
+import 'package:collection/collection.dart';
 
 class QuestMgr {
   static QuestMgr? _instance;
@@ -10,14 +14,8 @@ class QuestMgr {
   double _totalScore = 0.0;
   int _questionCount = 0;
   List<Map<String, dynamic>> _questionsData = [];
-  Map<int, int> _selectedAnswers = {};
-  Map<String, double> chapterScores = {};
-
-  final StreamController<Map<String, dynamic>> _questionStreamController =
-      StreamController<Map<String, dynamic>>.broadcast();
-
-  Stream<Map<String, dynamic>> get questionStream =>
-      _questionStreamController.stream;
+  Map<String, int> _selectedAnswers = {}; // Changed to Map<String, int>
+  Map<int, double> chapterScores = {};
 
   static Future<QuestMgr> getInstance({
     required List<int> selectedChapters,
@@ -32,13 +30,18 @@ class QuestMgr {
     }
     _isCreating = true;
     _instance = QuestMgr();
-    await _instance!.initialize(selectedChapters: selectedChapters);
+    await _instance!.initialize(
+      selectedChapters: selectedChapters,
+      difficulty: difficulty,
+    );
     _isCreating = false;
     return _instance!;
   }
 
-  Future<void> initialize(
-      {required List<int> selectedChapters, int difficulty = 1}) async {
+  Future<void> initialize({
+    required List<int> selectedChapters,
+    int difficulty = 1,
+  }) async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/questions.json');
 
@@ -50,13 +53,19 @@ class QuestMgr {
       final jsonString = await file.readAsString();
       _questionsData = List<Map<String, dynamic>>.from(json.decode(jsonString));
       _questionCount = _questionsData.length;
-      _questionStreamController.addStream(
-          Stream.fromIterable(_questionsData.where((q) => q['read'] != true)));
+
+      // Assign IDs to any questions that don't have one
+      for (var question in _questionsData) {
+        if (!question.containsKey('id')) {
+          question['id'] = Uuid().v4();
+        }
+      }
     } else {
       await generateNewQuestions(5, difficulty, selectedChapters);
     }
 
     _initializeChapterScores();
+    await _loadReadStatus();
   }
 
   Future<void> generateNewQuestions(
@@ -82,16 +91,21 @@ class QuestMgr {
           chapterNo,
         );
 
-        questionData['chapter'] = questionData['chapter'].toString();
-        questionData['correct'] =
-            int.tryParse(questionData['correct'].toString()) ?? 0;
-        questionData['read'] = false;
+        // Assign a unique ID to the question
+        questionData['id'] = Uuid().v4();
 
+        // Check for duplicates using question text
         if (!_questionsData
             .any((q) => q['question'] == questionData['question'])) {
+          // questionData['chapter'] = questionData['chapter'].toString();
+          questionData['correct'] =
+              int.tryParse(questionData['correct'].toString()) ?? 0;
+          questionData['read'] = false;
           _questionsData.add(questionData);
           _questionCount = _questionsData.length;
-          _questionStreamController.add(questionData);
+        } else {
+          // If duplicate, attempt to generate another question
+          i--;
         }
       } catch (e) {
         print('Error generating question for chapter $chapterNo: $e');
@@ -103,89 +117,91 @@ class QuestMgr {
 
   String _getBestChapter() {
     return chapterScores.isNotEmpty
-        ? chapterScores.entries.reduce((a, b) => a.value > b.value ? a : b).key
+        ? chapterScores.entries
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key
+            .toString()
         : '1';
   }
 
   String _getWorstChapter() {
     return chapterScores.isNotEmpty
-        ? chapterScores.entries.reduce((a, b) => a.value < b.value ? a : b).key
+        ? chapterScores.entries
+            .reduce((a, b) => a.value < b.value ? a : b)
+            .key
+            .toString()
         : '1';
   }
 
   void _initializeChapterScores() {
     chapterScores.clear();
     for (var question in _questionsData) {
-      String chapter = question['chapter'].toString();
-      chapterScores[chapter] = chapterScores[chapter] ?? 0.0;
+      int? chapter = question['chapter'];
+      if (chapter != null) {
+        chapterScores[chapter] = chapterScores[chapter] ?? 0.0;
+      } else {
+        print('Warning: Invalid chapter in _questionsData');
+      }
     }
   }
 
-  Future<String> getQuestion(int index) async {
-    if (index >= _questionsData.length) return 'No more questions available.';
-    return _questionsData[index]['question'] ?? 'Unknown Question';
+  List<Map<String, dynamic>> getUnansweredQuestions() {
+    return _questionsData.where((q) => q['read'] != true).toList();
   }
 
-  Future<List<String>> getChoices(int index) async {
-    if (index >= _questionsData.length) return [];
-    return List<String>.from(_questionsData[index]['choices']);
-  }
+  Future<void> selectAnswerById(
+      String questionId, int selectedChoiceIndex) async {
+    var questionIndex = _questionsData.indexWhere((q) => q['id'] == questionId);
+    if (questionIndex == -1) return;
 
-  Future<int> getCorrectAnswerIndex(int index) async {
-    if (index >= _questionsData.length) return 0;
-    List<dynamic> points = _questionsData[index]['points'] ?? [0.0];
-    return points.indexWhere((p) => (p as num).toDouble() == 1.0);
-  }
-
-  Future<String> getQuestionHelp(int index) async {
-    if (index >= _questionsData.length) return '';
-    return _questionsData[index]['help'] ?? '';
+    await selectAnswer(questionIndex, selectedChoiceIndex);
   }
 
   Future<void> selectAnswer(int questionIndex, int selectedChoiceIndex) async {
     if (questionIndex >= _questionsData.length) return;
 
+    // Add question to history
+    String questionText = _questionsData[questionIndex]['question'];
+    await QuestionHistoryManager.addQuestionToHistory(questionText);
+
     List<dynamic> points = _questionsData[questionIndex]['points'] ?? [0.0];
-    String chapter =
-        _questionsData[questionIndex]['chapter']?.toString() ?? 'Unknown';
+    int? chapter = _questionsData[questionIndex]['chapter'];
 
     double earnedPoints =
         (points[selectedChoiceIndex] as num?)?.toDouble() ?? 0.0;
 
     _totalScore += earnedPoints;
-    chapterScores[chapter] = (chapterScores[chapter] ?? 0.0) + earnedPoints;
+
+    if (chapter != null) {
+      // Update chapter score
+      chapterScores[chapter] = (chapterScores[chapter] ?? 0.0) + earnedPoints;
+      print(
+          'Chapter $chapter, earned points: $earnedPoints, total chapter score: ${chapterScores[chapter]}');
+    } else {
+      print('Warning: Chapter is null for question at index $questionIndex');
+    }
 
     _questionsData[questionIndex]['read'] = true;
     await _saveQuestions();
-    _selectedAnswers[questionIndex] = selectedChoiceIndex;
+
+    String questionId = _questionsData[questionIndex]['id'];
+    _selectedAnswers[questionId] = selectedChoiceIndex;
+    await _saveReadStatus();
   }
 
-  Future<void> _saveQuestions() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/questions.json');
-    await file.writeAsString(json.encode(_questionsData));
+  int getQuestionChapterById(String questionId) {
+    var question =
+        _questionsData.firstWhereOrNull((q) => q['id'] == questionId);
+    if (question != null) {
+      return int.tryParse(question['chapter']?.toString() ?? '-1') ?? -1;
+    }
+    return -1;
   }
 
   double get totalScore => _totalScore;
-  int get questionCount => _questionCount;
-  int get totalQuestions => _questionsData.length;
-
-  void dispose() {
-    _questionStreamController.close();
-  }
 
   int getUnreadQuestionCount() {
     return _questionsData.where((q) => q['read'] != true).length;
-  }
-
-  // Public method to get the chapter number of a question
-  int getQuestionChapter(int index) {
-    if (index >= 0 && index < _questionsData.length) {
-      return int.tryParse(
-              _questionsData[index]['chapter']?.toString() ?? '-1') ??
-          -1;
-    }
-    return -1;
   }
 
   Future<void> resetQuiz({
@@ -202,11 +218,36 @@ class QuestMgr {
     await generateNewQuestions(5, difficulty, selectedChapters);
   }
 
-  // Public method to check if a question has been read
-  bool isQuestionRead(int index) {
-    if (index >= 0 && index < _questionsData.length) {
-      return _questionsData[index]['read'] ?? false;
+  bool isQuestionRead(String questionId) {
+    var question =
+        _questionsData.firstWhereOrNull((q) => q['id'] == questionId);
+    if (question != null) {
+      return question['read'] ?? false;
     }
     return false;
+  }
+
+  Future<void> _loadReadStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (var question in _questionsData) {
+      String id = question['id'];
+      bool isRead = prefs.getBool('question_read_$id') ?? false;
+      question['read'] = isRead;
+    }
+  }
+
+  Future<void> _saveReadStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (var question in _questionsData) {
+      String id = question['id'];
+      bool isRead = question['read'] ?? false;
+      await prefs.setBool('question_read_$id', isRead);
+    }
+  }
+
+  Future<void> _saveQuestions() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/questions.json');
+    await file.writeAsString(json.encode(_questionsData));
   }
 }
