@@ -19,7 +19,7 @@ class QuestMgr {
 
   static Future<QuestMgr> getInstance({
     required List<int> selectedChapters,
-    required int difficulty,
+    required String difficulty,
   }) async {
     if (_instance != null) return _instance!;
     if (_isCreating) {
@@ -40,7 +40,7 @@ class QuestMgr {
 
   Future<void> initialize({
     required List<int> selectedChapters,
-    int difficulty = 1,
+    String difficulty = 'Easy',
   }) async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/questions.json');
@@ -70,45 +70,39 @@ class QuestMgr {
 
   Future<void> generateNewQuestions(
     int numQuestions,
-    int difficulty,
+    String difficulty,
     List<int> selectedChapters,
   ) async {
     GPTQuestionGenerator generator = GPTQuestionGenerator();
 
-    for (int i = 0; i < numQuestions; i++) {
-      if (getUnreadQuestionCount() >= 10) {
-        break; // Stop if there are 10 unread questions
+    // Generate at least one question for each selected chapter
+    for (int chapter in selectedChapters) {
+      if (getUnreadQuestionCount() >= 15) {
+        break; // Increased max unread questions
       }
 
-      final int chapterNo = selectedChapters[i % selectedChapters.length];
       try {
         final questionData = await generator.generateQuestion(
-          difficulty + i,
+          difficulty,
           _totalScore.toInt(),
           _selectedAnswers.length,
           _getBestChapter(),
           _getWorstChapter(),
-          chapterNo,
+          chapter,
         );
 
-        // Assign a unique ID to the question
         questionData['id'] = Uuid().v4();
 
-        // Check for duplicates using question text
         if (!_questionsData
             .any((q) => q['question'] == questionData['question'])) {
-          // questionData['chapter'] = questionData['chapter'].toString();
           questionData['correct'] =
               int.tryParse(questionData['correct'].toString()) ?? 0;
           questionData['read'] = false;
           _questionsData.add(questionData);
           _questionCount = _questionsData.length;
-        } else {
-          // If duplicate, attempt to generate another question
-          i--;
         }
       } catch (e) {
-        print('Error generating question for chapter $chapterNo: $e');
+        print('Error generating question for chapter $chapter: $e');
       }
     }
 
@@ -206,7 +200,7 @@ class QuestMgr {
 
   Future<void> resetQuiz({
     required List<int> selectedChapters,
-    required int difficulty,
+    required String difficulty,
   }) async {
     _totalScore = 0.0;
     chapterScores.clear();

@@ -13,6 +13,12 @@ class ScoresScreen extends StatelessWidget {
     super.key,
   });
 
+  double get maxChapterScore {
+    if (chapterScores.isEmpty) return 1.0; // Prevent division by zero
+    return chapterScores.values
+        .reduce((max, score) => max > score ? max : score);
+  }
+
   @override
   Widget build(BuildContext context) {
     initSizeConfig(context);
@@ -64,31 +70,40 @@ class ScoresScreen extends StatelessWidget {
     }
 
     chaptersAnswered.sort(); // Sort the chapters numerically
+    final maxScore = maxChapterScore; // Get the highest score
 
     return ListView.builder(
       itemCount: chaptersAnswered.length,
       itemBuilder: (context, index) {
         int chapter = chaptersAnswered[index];
         double score = chapterScores[chapter] ?? 0.0;
+        // Calculate relative progress (0.0 to 1.0)
+        double relativeProgress = score / maxScore;
+
         return Padding(
           padding: EdgeInsets.symmetric(vertical: propHeight(5)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Chapter $chapter',
-                style: FontStyles.sub,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Chapter $chapter',
+                    style: FontStyles.sub,
+                  ),
+                  Text(
+                    'Score: ${score.toStringAsFixed(2)}',
+                    style: FontStyles.sub,
+                  ),
+                ],
               ),
               SizedBox(height: propHeight(5)),
               LinearProgressIndicator(
-                value: score % 1.0, // Adjust as per your scoring logic
+                value: relativeProgress, // Use relative progress
                 backgroundColor: AppColors.gray,
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
-              ),
-              SizedBox(height: propHeight(5)),
-              Text(
-                'Score: ${score.toStringAsFixed(2)}',
-                style: FontStyles.sub,
+                minHeight: propHeight(8), // Make the progress bar more visible
               ),
             ],
           ),

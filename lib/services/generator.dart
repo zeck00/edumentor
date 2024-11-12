@@ -6,7 +6,7 @@ import 'package:edumentor/services/history_manager.dart';
 class GPTQuestionGenerator {
   // Generates a question based on user score, progress, and chapter context.
   Future<Map<String, dynamic>> generateQuestion(
-    int difficulty,
+    String difficulty,
     int score,
     int numAnswered,
     String bestChapter,
@@ -73,7 +73,7 @@ class GPTQuestionGenerator {
 
   // Create a dynamic prompt for the OpenAI API
   String createDynamicPrompt(
-    int difficulty,
+    String difficulty,
     int score,
     int numAnswered,
     String bestChapter,
@@ -96,7 +96,7 @@ STUDENT CONTEXT:
 - Questions Completed: $numAnswered
 - Strongest Chapter: $bestChapter
 - Weakest Chapter: $worstChapter
-- Required Difficulty: $difficulty/10
+- Required Difficulty: $difficulty --make sure to take that into account,
 
 Chapters:
 1. Basic Nutritional Concepts (macronutrients, micronutrients, and energy balance)

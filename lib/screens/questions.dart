@@ -28,7 +28,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   List<int?> _selectedAnswers = [];
   List<bool> _answeredQuestions = [];
   List<String> _helpTexts = [];
-  double _difficultyLevel = 1.0;
+  String _difficultyLevel = 'Moderate';
   List<int> _selectedChapters = List.generate(15, (index) => index + 1);
   double _totalScore = 0.0;
   Map<int, double> _chapterScores = {};
@@ -50,7 +50,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   Future<void> _initializeQuestMgr() async {
     _questMgr = await QuestMgr.getInstance(
       selectedChapters: _selectedChapters,
-      difficulty: _difficultyLevel.toInt(),
+      difficulty: _difficultyLevel,
     );
   }
 
@@ -98,9 +98,9 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
         });
       }
       await _questMgr!.generateNewQuestions(
-        uncoveredChapters.length,
-        _difficultyLevel.toInt(),
-        uncoveredChapters,
+        _selectedChapters.length - 9,
+        _difficultyLevel,
+        _selectedChapters,
       );
     } catch (e) {
       print("Error generating additional questions: $e");
@@ -291,14 +291,52 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: propWidth(16)),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(height: propHeight(20)),
           Center(
-            child: Text(
-              'Question ${index + 1}',
-              style: FontStyles.hometitle,
-              textAlign: TextAlign.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: propHeight(60),
+                      width: propWidth(120),
+                      padding: EdgeInsets.all(propWidth(12)),
+                      decoration: BoxDecoration(
+                        color: AppColors.gray,
+                        borderRadius: BorderRadius.circular(propWidth(15)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
+                          style: FontStyles.sub,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  height: propHeight(60),
+                  width: propWidth(250),
+                  padding: EdgeInsets.all(propWidth(12)),
+                  decoration: BoxDecoration(
+                    color: AppColors.black,
+                    borderRadius: BorderRadius.circular(propWidth(15)),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Question ${index + 1}',
+                      style:
+                          FontStyles.hometitle.copyWith(color: AppColors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: propHeight(10)),
@@ -306,7 +344,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
             padding: EdgeInsets.all(propWidth(20)),
             decoration: BoxDecoration(
               color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(propWidth(15)),
             ),
             child: Text(
               _questions[index],
@@ -386,25 +424,29 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
               ),
             ),
           SizedBox(height: propHeight(25)),
-          ElevatedButton(
-            onPressed: () {
-              if (_currentQuestionIndex >= _questions.length - 1) {
-                _showCompletionDialog();
-              } else {
-                _pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.green,
-              padding: EdgeInsets.symmetric(vertical: propHeight(12)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          SizedBox(
+            width: propWidth(300),
+            child: ElevatedButton(
+              onPressed: () {
+                if (_currentQuestionIndex >= _questions.length - 1) {
+                  _showCompletionDialog();
+                } else {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.green,
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(vertical: propHeight(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(propWidth(15)),
+                ),
               ),
+              child: Text('Next Question', style: FontStyles.button),
             ),
-            child: Text('Next Question', style: FontStyles.button),
           ),
           SizedBox(height: propHeight(20)),
           Text(
@@ -479,50 +521,102 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
 
   void _openChapterAndDifficultySelection() {
     List<int> tempSelectedChapters = List.from(_selectedChapters);
-    double tempDifficultyLevel = _difficultyLevel;
+    String tempDifficultyLevel = _difficultyLevel;
+    final List<String> difficultyLevels = [
+      'Very Easy',
+      'Easy',
+      'Moderate',
+      'Hard',
+      'Very Hard'
+    ];
+
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Select Chapters & Difficulty'),
+              title: Text(
+                'Configure Quiz',
+                style: FontStyles.hometitle.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Text(
+                      'Select Chapters',
+                      style:
+                          FontStyles.sub.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: propHeight(15)),
+                    Center(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: propWidth(8),
+                        runSpacing: propHeight(8),
+                        children: List.generate(15, (index) {
+                          return SizedBox(
+                            width: propWidth(110),
+                            height: propHeight(40),
+                            child: ChoiceChip(
+                              label: Text('Ch# ${index + 1}'),
+                              selected:
+                                  tempSelectedChapters.contains(index + 1),
+                              selectedColor: AppColors.green,
+                              labelStyle: TextStyle(
+                                color: tempSelectedChapters.contains(index + 1)
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    tempSelectedChapters.add(index + 1);
+                                  } else {
+                                    tempSelectedChapters.remove(index + 1);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Select Difficulty Level',
+                      style: FontStyles.sub.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 15),
                     Wrap(
                       spacing: 8.0,
                       runSpacing: 8.0,
-                      children: List.generate(15, (index) {
+                      alignment: WrapAlignment.center,
+                      children: difficultyLevels.map((level) {
                         return ChoiceChip(
-                          label: Text('Chapter ${index + 1}'),
-                          selected: tempSelectedChapters.contains(index + 1),
+                          label: Text(level),
+                          selected: tempDifficultyLevel == level,
+                          selectedColor: AppColors.green,
+                          labelStyle: TextStyle(
+                            color: tempDifficultyLevel == level
+                                ? Colors.white
+                                : Colors.black,
+                          ),
                           onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                tempSelectedChapters.add(index + 1);
-                              } else {
-                                tempSelectedChapters.remove(index + 1);
-                              }
-                            });
+                            if (selected) {
+                              setState(() {
+                                tempDifficultyLevel = level;
+                              });
+                            }
                           },
                         );
-                      }),
-                    ),
-                    SizedBox(height: 20),
-                    Text('Difficulty Level: ${tempDifficultyLevel.toInt()}'),
-                    Slider(
-                      value: tempDifficultyLevel,
-                      min: 1,
-                      max: 10,
-                      divisions: 9,
-                      label: tempDifficultyLevel.round().toString(),
-                      onChanged: (value) {
-                        setState(() {
-                          tempDifficultyLevel = value;
-                        });
-                      },
+                      }).toList(),
                     ),
                   ],
                 ),
@@ -555,13 +649,19 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
                     });
                     await _questMgr!.generateNewQuestions(
                       5,
-                      _difficultyLevel.toInt(),
+                      _difficultyLevel,
                       _selectedChapters,
                     );
                     await _loadUnansweredQuestions();
                     Navigator.of(context).pop();
                   },
-                  child: Text('Save', style: TextStyle(color: AppColors.green)),
+                  child: Text(
+                    'Save',
+                    style: TextStyle(
+                      color: AppColors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             );
