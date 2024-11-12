@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:math';
+import 'package:edumentor/screens/course.dart';
+import 'package:edumentor/screens/pdf.dart';
 import 'package:flutter/material.dart';
 import 'package:edumentor/screens/scores.dart'; // Scores Class
 import 'package:edumentor/services/manager.dart'; // QuestMgr class
@@ -35,6 +38,55 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   bool _isCountdownVisible = false;
   int _countdown = 10;
   List<String> _questionIds = [];
+  final List<String> _motivationalQuotes = [
+    'Every question you answer lights a spark in the world of knowledge! Let that spark lead you to greatness!',
+    'Think of each challenge as a mini-adventure. With every answer, you\'re leveling up in the game of knowledge!',
+    'You’re building your own masterpiece of wisdom—brick by brick, question by question. Keep going!',
+    'When the going gets tough, remember: every brain cell is hard at work, building an empire of understanding!',
+    'Your mind is like a puzzle; every answer is another piece fitting perfectly into place. Let’s complete this together!',
+    'Don’t let the unknown scare you—let it inspire you. Every answer you seek is a key unlocking the doors of knowledge!',
+    'Learning isn’t a sprint; it’s a fascinating journey. Take each step, enjoy each moment, and celebrate every discovery!',
+    'Imagine your brain as a treasure map—the more you explore, the richer you become in wisdom. Let’s uncover some gold!',
+    'Mistakes aren’t failures; they’re epic plot twists in your story of learning. Embrace them, learn from them, and move forward!',
+    'Curiosity is the fuel, knowledge is the fire—let’s make this journey one for the books!',
+    'Your journey through knowledge is like planting seeds; the more you learn, the more your mind blossoms!',
+    'An expert today was just like you, once wondering, learning, and asking questions. You’re on the same path—how cool is that?',
+    'Knowledge isn’t something you stumble upon; it’s a treasure you uncover, one lesson at a time. Keep digging!',
+    'Imagine your mind as a superhero—the more you learn, the stronger it becomes. Ready to unleash your power?',
+    'Every problem you solve is like adding a rare gem to your collection of wisdom. Let’s make that collection shine!',
+    'Your questions are like magic spells, each one revealing a new piece of understanding in this world of wonder.',
+    'Every answer is a stepping stone on your personal path to brilliance. Keep stepping up!',
+    'You are your own best guide. The more you challenge yourself, the better navigator of knowledge you become!',
+    'Think of each question like a piece of a gigantic puzzle. The more you learn, the clearer the picture of knowledge becomes.',
+    'Every time you open your mind to a new concept, you’re writing another chapter in your story of success. Make it an epic one!',
+    'You’re not just learning; you’re training your mind to see the world with new eyes. Ready for a view upgrade?',
+    'Unlocking knowledge is like building your dream fortress, one idea at a time. Make it unbreakable!',
+    'Curiosity and courage lead to discovery. Don’t be afraid to explore the unknown—it’s where magic happens!',
+    'Your journey is as unique as you are; every question you ask brings you closer to who you’re meant to become!',
+    'The road to expertise is under constant construction, and you’re the architect. Keep designing your future!',
+    'Education isn’t filling a bucket; it’s lighting a fire! Let’s keep that flame burning bright together!',
+    'Think of your questions as the threads weaving the fabric of knowledge. The more you ask, the richer it becomes!',
+    'Learning is the best kind of treasure hunt—each answer you find is a jewel you’ll carry forever!',
+    'Every question solved is like unlocking a level in the game of knowledge—how far can you go?',
+    'In this adventure of learning, your mind is the hero, and every question is a quest for greatness!',
+    'The more you learn, the more fascinating life becomes—let’s keep turning the pages in the book of knowledge!',
+    'Remember: Rome wasn’t built in a day, and neither is a brilliant mind. Keep laying those bricks of wisdom!',
+    'With every answer, you’re building a lighthouse of knowledge that will guide you and others through the darkness!',
+    'Picture each question as a key; every answer unlocks a new room in the mansion of your mind. Let’s explore together!',
+    'Learning is the only adventure where you get to be both the hero and the wizard. Ready for some magic?',
+    'Each answer is like collecting stars in a galaxy of knowledge—let’s see how bright we can make it!',
+    'Success in learning doesn’t come from shortcuts but from the roads you’re paving with each question answered!',
+    'Curiosity leads to discovery, and discovery leads to greatness. Keep asking, and you’ll keep finding!',
+    'Every question brings you closer to building a mind full of wonder. Let’s keep creating something beautiful!',
+    'Picture yourself as an explorer of ideas, gathering treasures from all over the world. There’s so much out there—let’s find it!',
+    'Learning isn’t just about facts; it’s about stretching your mind to see possibilities you never imagined!',
+    'Every piece of knowledge you gain is a building block in the structure of your future. Build it tall and strong!',
+    'The world of knowledge is infinite, and every question you ask is another step forward. Keep moving!',
+    'Think of learning like a dance—each step you take makes you more graceful, more powerful, and more aware of the rhythm of life.',
+    'In the library of life, every question is a book waiting to be opened. You’re the reader; let’s dive in!',
+    'With every answer, you’re piecing together the grand mosaic of understanding. Let’s keep adding color!',
+    'Success is found not just in knowing but in understanding deeply. Take the time; the rewards are endless.',
+  ];
 
   @override
   void initState() {
@@ -200,6 +252,8 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   }
 
   Widget _buildCountdownOverlay() {
+    int randomIndex = Random().nextInt(_motivationalQuotes.length);
+    String randomQuote = _motivationalQuotes[randomIndex];
     return Container(
       color: Colors.black.withOpacity(0.7),
       child: Center(
@@ -254,15 +308,31 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   }
 
   Widget _buildSkeletonLoader() {
+    // Select a random quote
+    int randomIndex = Random().nextInt(_motivationalQuotes.length);
+    String randomQuote = _motivationalQuotes[randomIndex];
+
     return Skeletonizer(
       enabled: true,
       child: Padding(
         padding: EdgeInsets.all(propWidth(16)),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(height: propHeight(20)),
-            Text('Loading Question...', style: FontStyles.hometitle),
+            Text(
+              'While I\'m generating your questions...',
+              style: FontStyles.hometitle,
+              textAlign: TextAlign.center,
+            ),
             SizedBox(height: propHeight(10)),
+            Text(
+              '"$randomQuote"',
+              style: FontStyles.sub.copyWith(fontStyle: FontStyle.italic),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: propHeight(20)),
+            // Existing skeleton loader content
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15),
@@ -298,26 +368,37 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      height: propHeight(60),
-                      width: propWidth(120),
-                      padding: EdgeInsets.all(propWidth(12)),
-                      decoration: BoxDecoration(
-                        color: AppColors.gray,
-                        borderRadius: BorderRadius.circular(propWidth(15)),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
-                          style: FontStyles.sub,
-                          textAlign: TextAlign.center,
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to PDF viewer with the selected material
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PdfViewerScreen(
+                          title:
+                              'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
+                          pdfPath:
+                              'assets/PDFs/Lec (${_questMgr!.getQuestionChapterById(_questionIds[index])}).pdf',
                         ),
                       ),
+                    );
+                  },
+                  child: Container(
+                    height: propHeight(60),
+                    width: propWidth(120),
+                    padding: EdgeInsets.all(propWidth(12)),
+                    decoration: BoxDecoration(
+                      color: AppColors.gray,
+                      borderRadius: BorderRadius.circular(propWidth(15)),
                     ),
-                  ],
+                    child: Center(
+                      child: Text(
+                        'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
+                        style: FontStyles.sub,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
                 ),
                 Container(
                   height: propHeight(60),
@@ -501,7 +582,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   Future<void> _loadMoreQuestions() async {
     setState(() {
       _isLoadingQuestion = true;
-      // Reset quiz state
+      // Reset quiz state but keep selected chapters and difficulty
       _currentQuestionIndex = 0;
       _questions.clear();
       _choicesList.clear();
@@ -510,10 +591,20 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       _answeredQuestions.clear();
       _helpTexts.clear();
       _coveredChapters.clear();
+      _questionIds.clear();
       _pageController.jumpToPage(0);
     });
-    await _generateAdditionalQuestions();
+
+    // Force generate new questions
+    await _questMgr!.generateNewQuestions(
+      5,
+      _difficultyLevel,
+      _selectedChapters,
+    );
+
+    // Load the newly generated questions
     await _loadUnansweredQuestions();
+
     setState(() {
       _isLoadingQuestion = false;
     });

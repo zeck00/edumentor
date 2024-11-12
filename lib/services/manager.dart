@@ -54,6 +54,28 @@ class QuestMgr {
       _questionsData = List<Map<String, dynamic>>.from(json.decode(jsonString));
       _questionCount = _questionsData.length;
 
+      // Ensure 'chapter' field is an integer
+      for (var question in _questionsData) {
+        if (question.containsKey('chapter')) {
+          var chapterValue = question['chapter'];
+          if (chapterValue is double) {
+            question['chapter'] = chapterValue.toInt();
+          } else if (chapterValue is String) {
+            var intValue = int.tryParse(chapterValue);
+            if (intValue != null) {
+              question['chapter'] = intValue;
+            } else {
+              var doubleValue = double.tryParse(chapterValue);
+              if (doubleValue != null) {
+                question['chapter'] = doubleValue.toInt();
+              } else {
+                question['chapter'] = -1; // Invalid chapter value
+              }
+            }
+          }
+        }
+      }
+
       // Assign IDs to any questions that don't have one
       for (var question in _questionsData) {
         if (!question.containsKey('id')) {
@@ -75,12 +97,11 @@ class QuestMgr {
   ) async {
     GPTQuestionGenerator generator = GPTQuestionGenerator();
 
-    // Generate at least one question for each selected chapter
-    for (int chapter in selectedChapters) {
-      if (getUnreadQuestionCount() >= 15) {
-        break; // Increased max unread questions
-      }
+    // Clear existing unread questions
+    _questionsData.removeWhere((q) => !(q['read'] ?? false));
 
+    // Generate new questions for each selected chapter
+    for (int chapter in selectedChapters) {
       try {
         final questionData = await generator.generateQuestion(
           difficulty,
@@ -92,15 +113,11 @@ class QuestMgr {
         );
 
         questionData['id'] = Uuid().v4();
-
-        if (!_questionsData
-            .any((q) => q['question'] == questionData['question'])) {
-          questionData['correct'] =
-              int.tryParse(questionData['correct'].toString()) ?? 0;
-          questionData['read'] = false;
-          _questionsData.add(questionData);
-          _questionCount = _questionsData.length;
-        }
+        questionData['correct'] =
+            int.tryParse(questionData['correct'].toString()) ?? 0;
+        questionData['read'] = false;
+        _questionsData.add(questionData);
+        _questionCount = _questionsData.length;
       } catch (e) {
         print('Error generating question for chapter $chapter: $e');
       }
@@ -187,9 +204,21 @@ class QuestMgr {
     var question =
         _questionsData.firstWhereOrNull((q) => q['id'] == questionId);
     if (question != null) {
-      return int.tryParse(question['chapter']?.toString() ?? '-1') ?? -1;
+      var chapterValue = question['chapter'];
+      if (chapterValue is int) {
+        return chapterValue;
+      } else if (chapterValue is double) {
+        return chapterValue.toInt();
+      } else if (chapterValue is String) {
+        // Try parsing as int directly
+        var intValue = int.tryParse(chapterValue);
+        if (intValue != null) return intValue;
+        // If that fails, try parsing as double and then convert to int
+        var doubleValue = double.tryParse(chapterValue);
+        if (doubleValue != null) return doubleValue.toInt();
+      }
     }
-    return -1;
+    return -1; // Default if chapter is not found or invalid
   }
 
   double get totalScore => _totalScore;

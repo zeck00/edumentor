@@ -15,8 +15,9 @@ class ScoresScreen extends StatelessWidget {
 
   double get maxChapterScore {
     if (chapterScores.isEmpty) return 1.0; // Prevent division by zero
-    return chapterScores.values
-        .reduce((max, score) => max > score ? max : score);
+    final maxScore =
+        chapterScores.values.reduce((max, score) => max > score ? max : score);
+    return maxScore > 0.0 ? maxScore : 1.0; // Ensure maxScore is not zero
   }
 
   @override
@@ -77,8 +78,9 @@ class ScoresScreen extends StatelessWidget {
       itemBuilder: (context, index) {
         int chapter = chaptersAnswered[index];
         double score = chapterScores[chapter] ?? 0.0;
-        // Calculate relative progress (0.0 to 1.0)
-        double relativeProgress = score / maxScore;
+
+        // Handle division by zero
+        double relativeProgress = (maxScore > 0.0) ? (score / maxScore) : 0.0;
 
         return Padding(
           padding: EdgeInsets.symmetric(vertical: propHeight(5)),

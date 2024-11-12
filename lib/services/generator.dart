@@ -124,7 +124,7 @@ Please provide:
   - Use the following point values: 1 (correct), 0.75 (closely related), 0.5 (somewhat related), 0.25 (incorrect).
 - The index of the correct answer (0-based).
 - The chapter of the question.
-- A brief help explanation of why the correct answer is right and guides the student to the correct answer.
+- A brief help explanation of how to get to the correct answer, without giving the answer directly.
 
 Example:
 Question: Which vitamin is essential for calcium absorption in the body?
@@ -132,7 +132,7 @@ Choices: Vitamin A, Vitamin D, Vitamin C, Vitamin B12
 Points: 0.25, 1, 0.5, 0.25
 Correct: 1
 Chapter: 6
-Help: Vitamin D helps the body absorb calcium, which is crucial for bone health.
+Help: Think of a vitamin that helps the body absorb calcium, which is crucial for bone health too!
 
 Please provide a NEW question that has not been asked before. Ensure that the question is not similar to any of the recently asked questions provided above.
 ''';

@@ -1,5 +1,4 @@
 import 'package:edumentor/screens/aboutus.dart';
-import 'package:edumentor/screens/chapters.dart';
 import 'package:edumentor/screens/course.dart';
 import 'package:edumentor/screens/profile.dart';
 import 'package:edumentor/screens/questions.dart';
