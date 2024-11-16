@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'history_manager.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/collection.dart';
+import 'dart:math';
 
 class QuestMgr {
   static QuestMgr? _instance;
@@ -100,26 +101,89 @@ class QuestMgr {
     // Clear existing unread questions
     _questionsData.removeWhere((q) => !(q['read'] ?? false));
 
-    // Generate new questions for each selected chapter
-    for (int chapter in selectedChapters) {
-      try {
-        final questionData = await generator.generateQuestion(
-          difficulty,
-          _totalScore.toInt(),
-          _selectedAnswers.length,
-          _getBestChapter(),
-          _getWorstChapter(),
-          chapter,
-        );
+    if (selectedChapters.length <= 3) {
+      // For 3 or fewer chapters, generate questions per chapter
+      int questionsPerChapter = numQuestions ~/ selectedChapters.length;
 
-        questionData['id'] = Uuid().v4();
-        questionData['correct'] =
-            int.tryParse(questionData['correct'].toString()) ?? 0;
-        questionData['read'] = false;
-        _questionsData.add(questionData);
-        _questionCount = _questionsData.length;
-      } catch (e) {
-        print('Error generating question for chapter $chapter: $e');
+      for (int chapter in selectedChapters) {
+        for (int i = 0; i < questionsPerChapter; i++) {
+          try {
+            final questionData = await generator.generateQuestion(
+              difficulty,
+              _totalScore.toInt(),
+              _selectedAnswers.length,
+              _getBestChapter(),
+              _getWorstChapter(),
+              chapter,
+            );
+
+            // Check for duplicate questions based on text similarity
+            String newQuestionText =
+                questionData['question'].toString().toLowerCase().trim();
+            bool isDuplicate = _questionsData.any((q) {
+              String existingQuestion =
+                  q['question'].toString().toLowerCase().trim();
+              return existingQuestion == newQuestionText ||
+                  _calculateSimilarity(existingQuestion, newQuestionText) > 0.8;
+            });
+
+            if (!isDuplicate) {
+              questionData['id'] = Uuid().v4();
+              questionData['chapter'] = chapter;
+              questionData['correct'] =
+                  int.tryParse(questionData['correct'].toString()) ?? 0;
+              questionData['read'] = false;
+              _questionsData.add(questionData);
+              _questionCount = _questionsData.length;
+            } else {
+              // If duplicate, try again
+              i--;
+            }
+          } catch (e) {
+            print('Error generating question for chapter $chapter: $e');
+          }
+        }
+      }
+    } else {
+      // Similar modification for the else block
+      for (int i = 0; i < numQuestions; i++) {
+        try {
+          final chapter =
+              selectedChapters[Random().nextInt(selectedChapters.length)];
+          final questionData = await generator.generateQuestion(
+            difficulty,
+            _totalScore.toInt(),
+            _selectedAnswers.length,
+            _getBestChapter(),
+            _getWorstChapter(),
+            chapter,
+          );
+
+          // Check for duplicate questions
+          String newQuestionText =
+              questionData['question'].toString().toLowerCase().trim();
+          bool isDuplicate = _questionsData.any((q) {
+            String existingQuestion =
+                q['question'].toString().toLowerCase().trim();
+            return existingQuestion == newQuestionText ||
+                _calculateSimilarity(existingQuestion, newQuestionText) > 0.8;
+          });
+
+          if (!isDuplicate) {
+            questionData['id'] = Uuid().v4();
+            questionData['chapter'] = chapter;
+            questionData['correct'] =
+                int.tryParse(questionData['correct'].toString()) ?? 0;
+            questionData['read'] = false;
+            _questionsData.add(questionData);
+            _questionCount = _questionsData.length;
+          } else {
+            // If duplicate, try again
+            i--;
+          }
+        } catch (e) {
+          print('Error generating questions: $e');
+        }
       }
     }
 
@@ -157,15 +221,45 @@ class QuestMgr {
   }
 
   List<Map<String, dynamic>> getUnansweredQuestions() {
-    return _questionsData.where((q) => q['read'] != true).toList();
+    try {
+      var questions = _questionsData.where((q) => q['read'] != true).map((q) {
+        _validateQuestionData(q);
+        return q;
+      }).toList();
+
+      if (questions.isEmpty) {
+        print('No unanswered questions available');
+      }
+
+      return questions;
+    } catch (e) {
+      print('Error retrieving unanswered questions: $e');
+      rethrow;
+    }
   }
 
   Future<void> selectAnswerById(
       String questionId, int selectedChoiceIndex) async {
-    var questionIndex = _questionsData.indexWhere((q) => q['id'] == questionId);
-    if (questionIndex == -1) return;
+    try {
+      var questionIndex =
+          _questionsData.indexWhere((q) => q['id'] == questionId);
+      if (questionIndex == -1) {
+        throw Exception('Question not found with ID: $questionId');
+      }
 
-    await selectAnswer(questionIndex, selectedChoiceIndex);
+      var questionData = _questionsData[questionIndex];
+      _validateQuestionData(questionData);
+
+      if (selectedChoiceIndex < 0 ||
+          selectedChoiceIndex >= (questionData['choices'] as List).length) {
+        throw Exception('Invalid choice index: $selectedChoiceIndex');
+      }
+
+      await selectAnswer(questionIndex, selectedChoiceIndex);
+    } catch (e) {
+      print('Error selecting answer: $e');
+      rethrow;
+    }
   }
 
   Future<void> selectAnswer(int questionIndex, int selectedChoiceIndex) async {
@@ -272,5 +366,42 @@ class QuestMgr {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/questions.json');
     await file.writeAsString(json.encode(_questionsData));
+  }
+
+  // Add this helper method to calculate text similarity
+  double _calculateSimilarity(String text1, String text2) {
+    if (text1.isEmpty || text2.isEmpty) return 0.0;
+
+    List<String> words1 = text1.split(' ');
+    List<String> words2 = text2.split(' ');
+
+    int commonWords = words1.where((word) => words2.contains(word)).length;
+    return (2.0 * commonWords) / (words1.length + words2.length);
+  }
+
+  // Add these validation methods
+  void _validateQuestionData(Map<String, dynamic> questionData) {
+    if (!questionData.containsKey('id')) {
+      throw Exception('Question missing ID');
+    }
+    if (!questionData.containsKey('question') ||
+        questionData['question'].isEmpty) {
+      throw Exception('Invalid or empty question text');
+    }
+    if (!questionData.containsKey('choices') ||
+        questionData['choices'] is! List ||
+        (questionData['choices'] as List).length != 4) {
+      throw Exception('Invalid choices data');
+    }
+    if (!questionData.containsKey('correct') ||
+        questionData['correct'] < 0 ||
+        questionData['correct'] >= (questionData['choices'] as List).length) {
+      throw Exception('Invalid correct answer index');
+    }
+    if (!questionData.containsKey('chapter') ||
+        questionData['chapter'] is! int ||
+        questionData['chapter'] <= 0) {
+      throw Exception('Invalid chapter number');
+    }
   }
 }

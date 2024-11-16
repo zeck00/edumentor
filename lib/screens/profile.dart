@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:edumentor/asset-class/fonts.dart';
 import 'package:edumentor/asset-class/size_config.dart';
+import 'package:edumentor/services/auth_service.dart';
+import 'package:edumentor/screens/login.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -99,8 +101,16 @@ class ProfilePage extends StatelessWidget {
               // Logout Button
               Center(
                 child: GestureDetector(
-                  onTap: () {
-                    // Handle logout
+                  onTap: () async {
+                    await AuthService.logout();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
                   },
                   child: Container(
                     width: propWidth(175),

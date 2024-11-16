@@ -223,6 +223,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       type: QuickAlertType.success,
       title: 'All Questions Completed!',
       text: 'Would you like to attempt more questions?',
+      customAsset: 'assets/success.gif',
       confirmBtnText: 'Do More!',
       onConfirmBtnTap: () async {
         Navigator.of(context).pop();
@@ -358,187 +359,224 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   }
 
   Widget _buildQuizContent(int index) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: propWidth(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(height: propHeight(20)),
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    // Navigate to PDF viewer with the selected material
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PdfViewerScreen(
-                          title:
-                              'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
-                          pdfPath:
-                              'assets/PDFs/Lec (${_questMgr!.getQuestionChapterById(_questionIds[index])}).pdf',
+    try {
+      // Validate index
+      if (index < 0 || index >= _questions.length) {
+        throw Exception('Invalid question index: $index');
+      }
+
+      // Validate question data
+      String questionText = _questions[index];
+      if (questionText.isEmpty) {
+        throw Exception('Empty question text at index $index');
+      }
+
+      List<String> choices = _choicesList[index];
+      if (choices.length != 4) {
+        throw Exception('Invalid number of choices at index $index');
+      }
+
+      String questionId = _questionIds[index];
+      if (questionId.isEmpty) {
+        throw Exception('Invalid question ID at index $index');
+      }
+
+      int? chapter = _questMgr?.getQuestionChapterById(questionId);
+      if (chapter == null || chapter <= 0) {
+        throw Exception('Invalid chapter number for question $questionId');
+      }
+
+      // Rest of your existing _buildQuizContent code...
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: propWidth(16)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(height: propHeight(20)),
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate to PDF viewer with the selected material
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PdfViewerScreen(
+                            title:
+                                'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
+                            pdfPath:
+                                'assets/PDFs/Lec (${_questMgr!.getQuestionChapterById(_questionIds[index])}).pdf',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      height: propHeight(60),
+                      width: propWidth(120),
+                      padding: EdgeInsets.all(propWidth(12)),
+                      decoration: BoxDecoration(
+                        color: AppColors.gray,
+                        borderRadius: BorderRadius.circular(propWidth(15)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
+                          style: FontStyles.sub,
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    );
-                  },
-                  child: Container(
+                    ),
+                  ),
+                  Container(
                     height: propHeight(60),
-                    width: propWidth(120),
+                    width: propWidth(250),
                     padding: EdgeInsets.all(propWidth(12)),
                     decoration: BoxDecoration(
-                      color: AppColors.gray,
+                      color: AppColors.black,
                       borderRadius: BorderRadius.circular(propWidth(15)),
                     ),
                     child: Center(
                       child: Text(
-                        'Chapter ${_questMgr!.getQuestionChapterById(_questionIds[index])}',
-                        style: FontStyles.sub,
+                        'Question ${index + 1}',
+                        style: FontStyles.hometitle
+                            .copyWith(color: AppColors.white),
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ),
-                ),
-                Container(
-                  height: propHeight(60),
-                  width: propWidth(250),
-                  padding: EdgeInsets.all(propWidth(12)),
+                ],
+              ),
+            ),
+            SizedBox(height: propHeight(10)),
+            Container(
+              padding: EdgeInsets.all(propWidth(20)),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(propWidth(15)),
+              ),
+              child: Text(
+                _questions[index],
+                style: FontStyles.sub,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            SizedBox(height: propHeight(24)),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _choicesList[index].length,
+                itemBuilder: (context, choiceIndex) {
+                  return GestureDetector(
+                    onTap: () => _onAnswerSelected(index, choiceIndex),
+                    child: Container(
+                      width: propWidth(250),
+                      margin: EdgeInsets.symmetric(vertical: propHeight(8)),
+                      padding: EdgeInsets.symmetric(
+                        vertical: propHeight(12),
+                        horizontal: propWidth(16),
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getChoiceColor(index, choiceIndex),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _choicesList[index][choiceIndex],
+                              style: FontStyles.sub,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: propHeight(20)),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isHelpVisible = !_isHelpVisible;
+                });
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
+              child: Text(
+                _isHelpVisible ? 'Hide Help' : 'Show Help',
+                style: FontStyles.button,
+              ),
+            ),
+            if (_isHelpVisible)
+              Padding(
+                padding: EdgeInsets.all(propHeight(16)),
+                child: Container(
+                  padding: EdgeInsets.all(propHeight(16)),
                   decoration: BoxDecoration(
-                    color: AppColors.black,
+                    borderRadius: BorderRadius.circular(15),
+                    color: AppColors.gray,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.help_outline_rounded, color: AppColors.black),
+                      SizedBox(width: propWidth(10)),
+                      Expanded(
+                        child: Text(
+                          _helpTexts[index],
+                          style: FontStyles.sub,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            SizedBox(height: propHeight(25)),
+            SizedBox(
+              width: propWidth(300),
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_currentQuestionIndex >= _questions.length - 1) {
+                    _showCompletionDialog();
+                  } else {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.green,
+                  alignment: Alignment.center,
+                  padding: EdgeInsets.symmetric(vertical: propHeight(12)),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(propWidth(15)),
                   ),
-                  child: Center(
-                    child: Text(
-                      'Question ${index + 1}',
-                      style:
-                          FontStyles.hometitle.copyWith(color: AppColors.white),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
                 ),
-              ],
+                child: Text('Next Question', style: FontStyles.button),
+              ),
             ),
-          ),
-          SizedBox(height: propHeight(10)),
-          Container(
-            padding: EdgeInsets.all(propWidth(20)),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(propWidth(15)),
-            ),
-            child: Text(
-              _questions[index],
-              style: FontStyles.sub,
+            SizedBox(height: propHeight(20)),
+            Text(
+              'Total Score: ${_totalScore.toStringAsFixed(2)}',
+              style: FontStyles.hometitle,
               textAlign: TextAlign.center,
             ),
-          ),
-          SizedBox(height: propHeight(24)),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _choicesList[index].length,
-              itemBuilder: (context, choiceIndex) {
-                return GestureDetector(
-                  onTap: () => _onAnswerSelected(index, choiceIndex),
-                  child: Container(
-                    width: propWidth(250),
-                    margin: EdgeInsets.symmetric(vertical: propHeight(8)),
-                    padding: EdgeInsets.symmetric(
-                      vertical: propHeight(12),
-                      horizontal: propWidth(16),
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getChoiceColor(index, choiceIndex),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _choicesList[index][choiceIndex],
-                            style: FontStyles.sub,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          SizedBox(height: propHeight(20)),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _isHelpVisible = !_isHelpVisible;
-              });
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.black),
-            child: Text(
-              _isHelpVisible ? 'Hide Help' : 'Show Help',
-              style: FontStyles.button,
-            ),
-          ),
-          if (_isHelpVisible)
-            Padding(
-              padding: EdgeInsets.all(propHeight(16)),
-              child: Container(
-                padding: EdgeInsets.all(propHeight(16)),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(15),
-                  color: AppColors.gray,
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.help_outline_rounded, color: AppColors.black),
-                    SizedBox(width: propWidth(10)),
-                    Expanded(
-                      child: Text(
-                        _helpTexts[index],
-                        style: FontStyles.sub,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          SizedBox(height: propHeight(25)),
-          SizedBox(
-            width: propWidth(300),
-            child: ElevatedButton(
-              onPressed: () {
-                if (_currentQuestionIndex >= _questions.length - 1) {
-                  _showCompletionDialog();
-                } else {
-                  _pageController.nextPage(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.green,
-                alignment: Alignment.center,
-                padding: EdgeInsets.symmetric(vertical: propHeight(12)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(propWidth(15)),
-                ),
-              ),
-              child: Text('Next Question', style: FontStyles.button),
-            ),
-          ),
-          SizedBox(height: propHeight(20)),
-          Text(
-            'Total Score: ${_totalScore.toStringAsFixed(2)}',
-            style: FontStyles.hometitle,
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: propHeight(10)),
-        ],
-      ),
-    );
+            SizedBox(height: propHeight(10)),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('Error building quiz content: $e');
+      return Center(
+        child: Text(
+          'Error loading question. Please try again.',
+          style: FontStyles.sub.copyWith(color: Colors.red),
+        ),
+      );
+    }
   }
 
   Color _getChoiceColor(int questionIndex, int choiceIndex) {
@@ -582,7 +620,6 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
   Future<void> _loadMoreQuestions() async {
     setState(() {
       _isLoadingQuestion = true;
-      // Reset quiz state but keep selected chapters and difficulty
       _currentQuestionIndex = 0;
       _questions.clear();
       _choicesList.clear();
@@ -595,14 +632,20 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       _pageController.jumpToPage(0);
     });
 
-    // Force generate new questions
+    // Calculate number of questions based on selected chapters
+    int numQuestions = _selectedChapters.length <= 3
+        ? 5 *
+            _selectedChapters
+                .length // 5 questions per chapter for 3 or fewer chapters
+        : 5; // Just 5 questions total for more than 3 chapters
+
+    // Generate new questions
     await _questMgr!.generateNewQuestions(
-      5,
+      numQuestions,
       _difficultyLevel,
       _selectedChapters,
     );
 
-    // Load the newly generated questions
     await _loadUnansweredQuestions();
 
     setState(() {
@@ -719,6 +762,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
                       QuickAlert.show(
                         context: context,
                         type: QuickAlertType.error,
+                        customAsset: 'assets/error.gif',
                         text: 'Please select at least one chapter.',
                         confirmBtnColor: AppColors.green,
                       );

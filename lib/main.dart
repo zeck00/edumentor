@@ -1,4 +1,7 @@
 import 'package:edumentor/screens/home.dart';
+import 'package:edumentor/screens/login.dart';
+import 'package:edumentor/services/auth_service.dart';
+import 'package:edumentor/asset-class/colors.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -12,13 +15,62 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
-        textScaler:
-            const TextScaler.linear(1.0), // Prevent text scaling by the system
+        textScaler: const TextScaler.linear(1.0),
       ),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Center(child: HomePage()),
+        theme: ThemeData(
+          primaryColor: AppColors.green,
+          scaffoldBackgroundColor: AppColors.white,
+          colorScheme: ColorScheme.light(
+            primary: AppColors.green,
+            secondary: AppColors.blue,
+            surface: AppColors.white,
+            error: AppColors.red,
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: AppColors.green,
+            foregroundColor: AppColors.white,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.green,
+              foregroundColor: AppColors.white,
+            ),
+          ),
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: AppColors.black),
+            bodyMedium: TextStyle(color: AppColors.black),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.black),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.green),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.black),
+            ),
+          ),
+        ),
+        home: FutureBuilder<bool>(
+          future: AuthService.isLoggedIn(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.green,
+                  ),
+                ),
+              );
+            }
+
+            return snapshot.data == true
+                ? const HomePage()
+                : const LoginScreen();
+          },
         ),
       ),
     );

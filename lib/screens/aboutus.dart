@@ -1,15 +1,64 @@
+import 'package:edumentor/widgets/copyright_widget.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:edumentor/asset-class/fonts.dart';
 import 'package:edumentor/asset-class/size_config.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutUsPage extends StatelessWidget {
   const AboutUsPage({super.key});
 
+  Future<void> _launchLinkedIn() async {
+    final Uri url = Uri.parse('https://www.linkedin.com/in/ziad-aloush/');
+    if (!await launchUrl(url)) {
+      throw Exception('Could not launch $url');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     initSizeConfig(context);
+
+    Widget buildDevelopmentTeamSection() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Development Team",
+            style: FontStyles.hometitle.copyWith(
+              fontSize: propText(20),
+              color: AppColors.black,
+            ),
+          ),
+          SizedBox(height: propHeight(10)),
+          RichText(
+            text: TextSpan(
+              style: FontStyles.sub,
+              children: [
+                const TextSpan(
+                  text: "At the heart of EduMentor's creation is ",
+                ),
+                TextSpan(
+                  text: "Ziad Ahmad",
+                  style: FontStyles.sub.copyWith(
+                    color: AppColors.green,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()..onTap = _launchLinkedIn,
+                ),
+                const TextSpan(
+                  text:
+                      " 💻✨, the app's main developer. Ziad combined his skills in programming, artificial intelligence 🤖, and user experience design 🎨 to bring the vision of EduMentor to life. His dedication and technical expertise ensured the app meets the highest standards of quality and usability 🔝✅.",
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: propHeight(20)),
+        ],
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -56,8 +105,7 @@ class AboutUsPage extends StatelessWidget {
                           TextSpan(
                             children: [
                               TextSpan(
-                                  text: 'Welcome To Edu',
-                                  style: FontStyles.hometitle),
+                                  text: 'Edu', style: FontStyles.hometitle),
                               TextSpan(
                                   text: 'Mentor', style: FontStyles.hometitleg),
                             ],
@@ -65,97 +113,32 @@ class AboutUsPage extends StatelessWidget {
                         ),
                         SizedBox(height: propHeight(10)),
                         Text(
-                          "EduMentor is an AI-powered learning assistant created by Ziad, developed under the supervision of the College of Health Sciences and the College of Computing and Informatics at the University of Sharjah (UOS). 🎓",
+                          "EduMentor is a groundbreaking mobile application designed to revolutionize the learning experience for students at the University of Sharjah (UOS) 📚📱. Tailored specifically for students, EduMentor combines personalized tutoring with cutting-edge technology 💡🔬 to assess and enhance student skills.",
                           style: FontStyles.sub,
                         ),
                         SizedBox(height: propHeight(20)),
-                        Text(
-                          "🚀 Key Features",
-                          style: FontStyles.hometitle.copyWith(
-                            fontSize: propText(20),
-                            color: AppColors.black,
-                          ),
+                        _buildSection(
+                          "Our Story",
+                          "EduMentor was developed with the generous support of a grant from the Chancellor of the University of Sharjah 🎓🤝. The project was a collaborative effort, bringing together expertise and passion 💪💼 from multiple disciplines to create a tool that truly supports student success 🏆.",
                         ),
-                        SizedBox(height: propHeight(10)),
-                        _buildFeature("AI-Generated Questions",
-                            "Say goodbye to static study materials! EduMentor uses AI to generate relevant and dynamic questions based on your course content."),
-                        SizedBox(height: propHeight(10)),
-                        _buildFeature("Performance Tracking",
-                            "With real-time analysis, EduMentor tracks your progress and provides feedback on your strengths and areas that need improvement."),
-                        SizedBox(height: propHeight(10)),
-                        _buildFeature("Personalized Study Experience",
-                            "Whether you're revising for exams or keeping up with your weekly lessons, EduMentor tailors questions and feedback based on your performance."),
-                        SizedBox(height: propHeight(10)),
-                        _buildFeature("Easy-to-Use Interface",
-                            "Designed with simplicity and efficiency in mind, EduMentor offers an intuitive interface that makes learning a breeze."),
-                        SizedBox(height: propHeight(20)),
-                        Text(
-                          "📱 Coming Soon to App Stores!",
-                          style: FontStyles.hometitle.copyWith(
-                            fontSize: propText(20),
-                            color: AppColors.black,
-                          ),
+                        _buildSection(
+                          "Supervision and Guidance",
+                          "The development of EduMentor was supervised by:\n\n"
+                              "Dr. Ayad Turky 👨‍🏫💻, Assistant Professor in the Department of Computer Science, whose technical insights and guidance shaped the app's functionality.\n\n"
+                              "Prof. Mohamed Alameddine 👨‍⚕️📖, Dean of the College of Health Sciences, who provided invaluable direction to ensure the app's alignment with educational needs in the health sciences field.\n\n"
+                              "Prof. Abbes Amira 👨‍💻🏛️, Dean of the College of Computing and Informatics, whose leadership in computing innovation supported the app's technical excellence.",
                         ),
-                        SizedBox(height: propHeight(10)),
-                        Text(
-                          "EduMentor will soon be available for download on both iOS and Android. Stay tuned for the official release on the App Store and Google Play! Follow along with the project for updates and be the first to know when the app is ready.",
-                          style: FontStyles.sub,
+                        buildDevelopmentTeamSection(),
+                        _buildSection(
+                          "Our Mission",
+                          "Our mission is to empower students with tools 🛠️ that enhance their learning, provide real-time feedback ⏱️, and foster academic growth 📈. By leveraging AI-driven insights and personalized assessments 🧠📊, EduMentor aims to help every student reach their full potential 🌟.",
+                        ),
+                        _buildSection(
+                          "Acknowledgments",
+                          "EduMentor is a testament to the collaborative spirit of the University of Sharjah 🤝🏫. We thank all faculty members, students, and staff who contributed to its development and success 🙏🎉. Together, we strive to create innovative solutions that benefit our academic community and beyond 🌍✨.",
                         ),
                         SizedBox(height: propHeight(20)),
-                        Text(
-                          "🔍 Supervised and Backed by UOS",
-                          style: FontStyles.hometitle.copyWith(
-                            fontSize: propText(20),
-                            color: AppColors.black,
-                          ),
-                        ),
-                        SizedBox(height: propHeight(10)),
-                        Text(
-                          "This project is developed in collaboration with the College of Health Sciences and the College of Computing and Informatics at UOS. Their expertise and supervision have ensured that EduMentor offers a top-tier educational experience.",
-                          style: FontStyles.sub,
-                        ),
-                        SizedBox(height: propHeight(20)),
-                        Text(
-                          "🎯 Target Users",
-                          style: FontStyles.hometitle.copyWith(
-                            fontSize: propText(20),
-                            color: AppColors.black,
-                          ),
-                        ),
-                        SizedBox(height: propHeight(10)),
-                        _buildFeature("University Students",
-                            "Especially those looking for smarter ways to study and track their progress."),
-                        SizedBox(height: propHeight(10)),
-                        _buildFeature("Educators",
-                            "Interested in offering AI-driven questions and performance feedback to students."),
-                        SizedBox(height: propHeight(20)),
-                        Text(
-                          "📅 Version 0.1.0",
-                          style: FontStyles.hometitle.copyWith(
-                            fontSize: propText(20),
-                            color: AppColors.black,
-                          ),
-                        ),
-                        SizedBox(height: propHeight(10)),
-                        Text(
-                          "Initial version under development with the goal of enhancing student learning and engagement. Stay tuned for exciting updates and new features!",
-                          style: FontStyles.sub,
-                        ),
-                        SizedBox(height: propHeight(30)),
-                        Text(
-                          "Created by: Ziad",
-                          style: FontStyles.sub.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: propText(16),
-                          ),
-                        ),
-                        Text(
-                          "Under the supervision of the College of Health Sciences and College of Computing and Informatics at the University of Sharjah",
-                          style: FontStyles.sub.copyWith(
-                            fontSize: propText(14),
-                          ),
-                        ),
-                        SizedBox(height: propHeight(20)),
+                        Center(child: const CopyrightWidget()),
                       ],
                     ),
                   ),
@@ -168,25 +151,23 @@ class AboutUsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFeature(String title, String description) {
+  Widget _buildSection(String title, String content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
           style: FontStyles.hometitle.copyWith(
-            fontSize: propText(18),
+            fontSize: propText(20),
             color: AppColors.black,
           ),
         ),
-        SizedBox(height: propHeight(4)),
+        SizedBox(height: propHeight(10)),
         Text(
-          description,
-          style: FontStyles.sub.copyWith(
-            fontSize: propText(14),
-            color: AppColors.black,
-          ),
+          content,
+          style: FontStyles.sub,
         ),
+        SizedBox(height: propHeight(20)),
       ],
     );
   }

@@ -1,11 +1,54 @@
+import 'package:edumentor/widgets/copyright_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:edumentor/asset-class/fonts.dart';
 import 'package:edumentor/asset-class/size_config.dart';
+import 'package:edumentor/screens/terms_conditions.dart';
+import 'package:edumentor/screens/privacy_policy.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
+  Future<void> _launchUOSWebsite() async {
+    final Uri url = Uri.parse('https://sharjah.ac.ae');
+    if (!await launchUrl(url)) {
+      throw Exception('Could not launch $url');
+    }
+  }
+
+  void _showLanguageSnackbar(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.language_rounded, color: AppColors.white),
+            SizedBox(width: propWidth(20)),
+            Flexible(
+              child: Text(
+                "We're working on adding more languages soon!✨",
+                style: FontStyles.sub.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.green,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(propWidth(10)),
+        ),
+        margin: EdgeInsets.symmetric(
+          horizontal: propWidth(16),
+          vertical: propHeight(16),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +105,7 @@ class SettingsPage extends StatelessWidget {
               _settingsOption(
                 label: 'Language',
                 icon: Icons.language_rounded,
-                onTap: () {
-                  // Show language selection
-                },
+                onTap: () => _showLanguageSnackbar(context),
               ),
               SizedBox(height: propHeight(30)),
 
@@ -81,9 +122,7 @@ class SettingsPage extends StatelessWidget {
               _settingsOption(
                 label: 'Help & Support',
                 icon: Icons.help_outline_rounded,
-                onTap: () {
-                  // Navigate to Help & Support
-                },
+                onTap: () => _launchUOSWebsite(),
               ),
               SizedBox(height: propHeight(30)),
 
@@ -94,16 +133,28 @@ class SettingsPage extends StatelessWidget {
                 label: 'Terms of Service',
                 icon: Icons.assignment_rounded,
                 onTap: () {
-                  // Navigate to Terms of Service
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TermsConditionsScreen(),
+                    ),
+                  );
                 },
               ),
               _settingsOption(
                 label: 'Privacy Policy',
                 icon: Icons.privacy_tip_rounded,
                 onTap: () {
-                  // Navigate to Privacy Policy
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PrivacyPolicyScreen(),
+                    ),
+                  );
                 },
               ),
+              SizedBox(height: propHeight(20)),
+              Center(child: const CopyrightWidget()),
             ],
           ),
         ),

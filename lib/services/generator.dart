@@ -140,22 +140,26 @@ Please provide a NEW question that has not been asked before. Ensure that the qu
 
   Map<String, dynamic> _parseGeneratedQuestion(String content) {
     try {
-      // Clean up content by removing ** and extra whitespace.
-      content = content.replaceAll(RegExp(r'\*\*'), '').trim();
-      print('Cleaned Content: $content');
+      // Clean up content and normalize line endings
+      content = content
+          .replaceAll(RegExp(r'\*\*'), '')
+          .replaceAll('\r\n', '\n')
+          .trim();
 
-      // Define regex patterns.
+      // More robust regex patterns with better error handling
       final questionRegex =
-          RegExp(r'Question:\s*(.*?)\s*(Choices:|$)', dotAll: true);
+          RegExp(r'Question:\s*(.*?)(?=\s*Choices:|$)', dotAll: true);
       final choicesRegex =
-          RegExp(r'Choices:\s*(.*?)\s*(Points:|$)', dotAll: true);
+          RegExp(r'Choices:\s*(.*?)(?=\s*Points:|$)', dotAll: true);
       final pointsRegex =
-          RegExp(r'Points:\s*(.*?)\s*(Correct:|$)', dotAll: true);
-      final correctRegex = RegExp(r'Correct:\s*(\d+)', dotAll: true);
-      final chapterRegex = RegExp(r'Chapter:\s*(\d+)', dotAll: true);
-      final helpRegex = RegExp(r'Help:\s*(.*)', dotAll: true);
+          RegExp(r'Points:\s*(.*?)(?=\s*Correct:|$)', dotAll: true);
+      final correctRegex =
+          RegExp(r'Correct:\s*(\d+)(?=\s*Chapter:|$)', dotAll: true);
+      final chapterRegex =
+          RegExp(r'Chapter:\s*(\d+)(?=\s*Help:|$)', dotAll: true);
+      final helpRegex = RegExp(r'Help:\s*(.*?)$', dotAll: true);
 
-      // Match each section with error checking.
+      // Match and validate each section
       final questionMatch = questionRegex.firstMatch(content);
       final choicesMatch = choicesRegex.firstMatch(content);
       final pointsMatch = pointsRegex.firstMatch(content);
@@ -163,23 +167,29 @@ Please provide a NEW question that has not been asked before. Ensure that the qu
       final chapterMatch = chapterRegex.firstMatch(content);
       final helpMatch = helpRegex.firstMatch(content);
 
-      if (questionMatch == null ||
-          choicesMatch == null ||
-          pointsMatch == null ||
-          correctMatch == null ||
-          chapterMatch == null ||
-          helpMatch == null) {
-        throw Exception(
-            'Failed to parse: missing key elements in the GPT response.');
+      // Detailed validation with specific error messages
+      if (questionMatch == null) {
+        throw Exception('Question section not found or invalid');
       }
+      if (choicesMatch == null) {
+        throw Exception('Choices section not found or invalid');
+      }
+      if (pointsMatch == null) {
+        throw Exception('Points section not found or invalid');
+      }
+      if (correctMatch == null) {
+        throw Exception('Correct answer index not found or invalid');
+      }
+      if (chapterMatch == null) {
+        throw Exception('Chapter number not found or invalid');
+      }
+      if (helpMatch == null) throw Exception('Help text not found or invalid');
 
-      // Extract question, help, chapter, and correct answer index.
-      String question = questionMatch.group(1)!.trim();
-      String help = helpMatch.group(1)!.trim();
-      int chapter = int.parse(chapterMatch.group(1)!.trim());
-      int correct = int.parse(correctMatch.group(1)!.trim());
+      // Extract and validate question components
+      String question = questionMatch.group(1)?.trim() ?? '';
+      if (question.isEmpty) throw Exception('Question text cannot be empty');
 
-      // Extract and clean up choices.
+      // Parse and validate choices
       List<String> choices = choicesMatch
           .group(1)!
           .split(RegExp(r',\s*'))
@@ -187,20 +197,39 @@ Please provide a NEW question that has not been asked before. Ensure that the qu
           .where((choice) => choice.isNotEmpty)
           .toList();
 
-      // Parse points and validate lengths.
-      List<double> points = pointsMatch
-          .group(1)!
-          .split(RegExp(r',\s*'))
-          .map((p) => double.tryParse(p.trim()) ?? 0.0)
-          .toList();
-
-      if (choices.length != points.length) {
-        print(
-            "Mismatch found - Choices: ${choices.length}, Points: ${points.length}");
-        throw Exception('Mismatch between number of choices and points.');
+      if (choices.length != 4) {
+        throw Exception(
+            'Exactly 4 choices are required, found: ${choices.length}');
       }
 
-      // Return parsed question data.
+      // Parse and validate points
+      List<double> points =
+          pointsMatch.group(1)!.split(RegExp(r',\s*')).map((p) {
+        double? value = double.tryParse(p.trim());
+        if (value == null) throw Exception('Invalid point value: $p');
+        return value;
+      }).toList();
+
+      if (points.length != choices.length) {
+        throw Exception(
+            'Mismatch between choices (${choices.length}) and points (${points.length})');
+      }
+
+      // Parse and validate correct answer index
+      int correct = int.parse(correctMatch.group(1)!.trim());
+      if (correct < 0 || correct >= choices.length) {
+        throw Exception('Correct answer index out of range: $correct');
+      }
+
+      // Parse and validate chapter
+      int chapter = int.parse(chapterMatch.group(1)!.trim());
+      if (chapter <= 0) throw Exception('Invalid chapter number: $chapter');
+
+      // Extract and validate help text
+      String help = helpMatch.group(1)?.trim() ?? '';
+      if (help.isEmpty) throw Exception('Help text cannot be empty');
+
+      // Return validated question data
       return {
         'question': question,
         'choices': choices,
@@ -211,6 +240,7 @@ Please provide a NEW question that has not been asked before. Ensure that the qu
       };
     } catch (e) {
       print('Error parsing GPT response: $e');
+      print('Original content:\n$content');
       rethrow;
     }
   }

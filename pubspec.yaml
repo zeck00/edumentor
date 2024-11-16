@@ -7,6 +7,7 @@ environment:
   sdk: ^3.5.3
 
 dependencies:
+  collection: ^1.18.0
   flutter:
     sdk: flutter
   flutter_spinkit: ^5.2.1
@@ -16,11 +17,14 @@ dependencies:
   path_provider: ^2.1.4
   quickalert: ^1.1.0
   rename: ^3.0.2
-  shared_preferences: ^2.3.2
+  shared_preferences: ^2.2.2
   skeletonizer: ^1.4.2
   syncfusion_flutter_pdfviewer: ^27.1.56
   uuid: ^4.5.1
   wave_loading_indicator: ^1.0.7
+  url_launcher: ^6.2.5
+  confetti: ^0.8.0
+  another_flushbar: ^1.12.30
 
 dev_dependencies:
   flutter_test:

@@ -102,6 +102,7 @@ class ScoresScreen extends StatelessWidget {
               ),
               SizedBox(height: propHeight(5)),
               LinearProgressIndicator(
+                borderRadius: BorderRadius.circular(propWidth(15)),
                 value: relativeProgress, // Use relative progress
                 backgroundColor: AppColors.gray,
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
