@@ -592,6 +592,7 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
 
   void _onAnswerSelected(int questionIndex, int answerIndex) async {
     if (_answeredQuestions[questionIndex]) return;
+
     setState(() {
       _selectedAnswers[questionIndex] = answerIndex;
       _answeredQuestions[questionIndex] = true;
@@ -600,6 +601,16 @@ class _MCQQuizScreenState extends State<MCQQuizScreen> {
       _totalScore = _questMgr?.totalScore ?? 0.0;
       _chapterScores = Map<int, double>.from(_questMgr?.chapterScores ?? {});
     });
+
+    // Generate feedback in background if enough questions answered
+    if ((_questMgr?.getAnsweredQuestionCount() ?? 0) >= 10) {
+      _questMgr?.generateFeedback(
+        _totalScore,
+        _questMgr?.getAnsweredQuestionCount() ?? 0,
+        _chapterScores,
+      );
+    }
+
     int chapter =
         _questMgr!.getQuestionChapterById(_questionIds[questionIndex]);
     if (chapter != -1 && !_coveredChapters.contains(chapter)) {

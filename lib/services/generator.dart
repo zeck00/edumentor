@@ -244,4 +244,73 @@ Please provide a NEW question that has not been asked before. Ensure that the qu
       rethrow;
     }
   }
+
+  Future<String> generateFeedback(
+    double totalScore,
+    int questionsAnswered,
+    Map<int, double> chapterScores,
+  ) async {
+    if (questionsAnswered < 10) {
+      return "Complete more questions to get personalized feedback!";
+    }
+
+    final String prompt = '''
+Analyze the following student performance data and provide personalized feedback:
+
+Total Score: $totalScore
+Questions Answered: $questionsAnswered
+Chapter Performance:
+${chapterScores.entries.map((e) => '- Chapter ${e.key}: ${e.value.toStringAsFixed(2)}').join('\n')}
+
+Previous Question History:
+${(await QuestionHistoryManager.getQuestionHistory()).join('\n')}
+
+Please provide a detailed analysis in the following format:
+1. Overall Performance: Brief summary of the student's overall progress
+2. Strengths: Identify 2-3 chapters where the student excels
+3. Areas for Improvement: Identify 2-3 chapters that need more focus
+4. Specific Recommendations: 
+   - Study strategies
+   - Focus areas
+   - Practice suggestions
+5. Motivational Message: End with an encouraging note
+
+Keep the tone positive and constructive while being specific about improvements needed.
+''';
+
+    final Map<String, dynamic> body = {
+      "model": "gpt-4o-mini",
+      "messages": [
+        {
+          "role": "system",
+          "content":
+              "You are an educational advisor providing personalized feedback to students based on their performance data."
+        },
+        {"role": "user", "content": prompt}
+      ],
+      "max_tokens": 250,
+      "temperature": 0.7,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${ApiKeys.LapiKey}',
+        },
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = json.decode(response.body);
+        return data['choices'][0]['message']['content'];
+      } else {
+        throw Exception('Failed to generate feedback: ${response.body}');
+      }
+    } catch (e) {
+      print('Error generating feedback: $e');
+      rethrow;
+    }
+  }
 }

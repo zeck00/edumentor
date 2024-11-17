@@ -25,6 +25,7 @@ dependencies:
   url_launcher: ^6.2.5
   confetti: ^0.8.0
   another_flushbar: ^1.12.30
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

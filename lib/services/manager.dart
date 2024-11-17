@@ -404,4 +404,28 @@ class QuestMgr {
       throw Exception('Invalid chapter number');
     }
   }
+
+  int getAnsweredQuestionCount() {
+    return _selectedAnswers.length;
+  }
+
+  Future<void> generateFeedback(
+    double totalScore,
+    int questionsAnswered,
+    Map<int, double> chapterScores,
+  ) async {
+    try {
+      final generator = GPTQuestionGenerator();
+      final feedback = await generator.generateFeedback(
+        totalScore,
+        questionsAnswered,
+        chapterScores,
+      );
+
+      // Store the feedback if needed
+      // You could add a SharedPreferences storage here if you want to persist the feedback
+    } catch (e) {
+      print('Error generating feedback in QuestMgr: $e');
+    }
+  }
 }
