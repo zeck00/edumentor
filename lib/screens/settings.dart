@@ -7,6 +7,8 @@ import 'package:edumentor/asset-class/size_config.dart';
 import 'package:edumentor/screens/terms_conditions.dart';
 import 'package:edumentor/screens/privacy_policy.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:edumentor/services/auth_service.dart';
+import 'package:edumentor/screens/login.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -139,7 +141,15 @@ class SettingsPage extends StatelessWidget {
                   );
 
                   if (confirm == true) {
-                    // Handle logout
+                    await AuthService.logout();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
                   }
                 },
               ),
