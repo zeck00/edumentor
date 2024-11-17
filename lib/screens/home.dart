@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,6 +32,12 @@ class _HomePageState extends State<HomePage> {
     'Coming Soon...',
   ];
   late ConfettiController _confettiController;
+  late TutorialCoachMark tutorialCoachMark;
+  List<TargetFocus> targets = [];
+  final GlobalKey courseSelectionKey = GlobalKey();
+  final GlobalKey streakKey = GlobalKey();
+  final GlobalKey eduMentorAIKey = GlobalKey();
+  final GlobalKey courseMaterialKey = GlobalKey();
 
   @override
   void initState() {
@@ -38,6 +45,10 @@ class _HomePageState extends State<HomePage> {
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 3));
     _updateStreak();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstTimeUser();
+    });
   }
 
   @override
@@ -138,6 +149,263 @@ class _HomePageState extends State<HomePage> {
     ).show(context);
   }
 
+  Future<void> _checkFirstTimeUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool isFirstTime = prefs.getBool('first_time_user') ?? true;
+
+    if (isFirstTime) {
+      _initTargets();
+      _showTutorial();
+      await prefs.setBool('first_time_user', false);
+    }
+  }
+
+  void _initTargets() {
+    targets.addAll([
+      TargetFocus(
+        identify: "courseSelection",
+        keyTarget: courseSelectionKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 10,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(propWidth(15)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(propWidth(15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.school_rounded, color: AppColors.green),
+                        SizedBox(width: propWidth(10)),
+                        Text(
+                          "Course Selection",
+                          style: FontStyles.hometitle.copyWith(
+                            color: AppColors.black,
+                            fontSize: propWidth(20),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: propHeight(10)),
+                    Text(
+                      "Select your course here to access course-specific materials and quizzes.",
+                      style: FontStyles.sub.copyWith(
+                        color: AppColors.black,
+                        fontSize: propWidth(16),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "streak",
+        keyTarget: streakKey,
+        shape: ShapeLightFocus.Circle,
+        radius: 25,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(propWidth(15)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(propWidth(15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.local_fire_department_rounded,
+                            color: Colors.orangeAccent),
+                        SizedBox(width: propWidth(10)),
+                        Text(
+                          "Daily Streak",
+                          style: FontStyles.hometitle.copyWith(
+                            color: AppColors.black,
+                            fontSize: propWidth(20),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: propHeight(10)),
+                    Text(
+                      "Track your learning consistency! Keep your streak going by studying daily.",
+                      style: FontStyles.sub.copyWith(
+                        color: AppColors.black,
+                        fontSize: propWidth(16),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "eduMentorAI",
+        keyTarget: eduMentorAIKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 10,
+        contents: [
+          TargetContent(
+            align: ContentAlign.bottom,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(propWidth(15)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(propWidth(15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.psychology_alt_rounded,
+                            color: AppColors.green),
+                        SizedBox(width: propWidth(10)),
+                        Text(
+                          "EduMentor AI",
+                          style: FontStyles.hometitle.copyWith(
+                            color: AppColors.black,
+                            fontSize: propWidth(20),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: propHeight(10)),
+                    Text(
+                      "Practice with AI-generated questions tailored to your performance level.",
+                      style: FontStyles.sub.copyWith(
+                        color: AppColors.black,
+                        fontSize: propWidth(16),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      TargetFocus(
+        identify: "courseMaterial",
+        keyTarget: courseMaterialKey,
+        shape: ShapeLightFocus.RRect,
+        radius: 10,
+        contents: [
+          TargetContent(
+            align: ContentAlign.top,
+            builder: (context, controller) {
+              return Container(
+                padding: EdgeInsets.all(propWidth(15)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(propWidth(15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.menu_book_rounded, color: AppColors.green),
+                        SizedBox(width: propWidth(10)),
+                        Text(
+                          "Course Material",
+                          style: FontStyles.hometitle.copyWith(
+                            color: AppColors.black,
+                            fontSize: propWidth(20),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: propHeight(10)),
+                    Text(
+                      "Access your course materials, lectures, and study resources here.",
+                      style: FontStyles.sub.copyWith(
+                        color: AppColors.black,
+                        fontSize: propWidth(16),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    ]);
+  }
+
+  void _showTutorial() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: targets,
+      colorShadow: AppColors.green.withOpacity(0.8),
+      textSkip: "SKIP TUTORIAL",
+      paddingFocus: 5,
+      opacityShadow: 0.8,
+      textStyleSkip: FontStyles.sub.copyWith(
+        color: Colors.white,
+        fontSize: propWidth(16),
+        fontWeight: FontWeight.bold,
+      ),
+      onFinish: () {
+        print("Tutorial finished");
+        return true;
+      },
+      onSkip: () {
+        print("Tutorial skipped");
+        return true;
+      },
+    )..show(context: context);
+  }
+
   @override
   Widget build(BuildContext context) {
     initSizeConfig(context);
@@ -165,6 +433,7 @@ class _HomePageState extends State<HomePage> {
                           height: propHeight(55),
                         ),
                         InkWell(
+                          key: streakKey,
                           onTap: () {
                             _showStreakFlushbar();
                           },
@@ -194,6 +463,7 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(height: propHeight(10)),
 
                     MiraiDropDownMenu<String>(
+                      key: courseSelectionKey,
                       valueNotifier: _selectedCourseNotifier,
                       itemWidgetBuilder: (int index, String? item,
                           {bool isItemSelected = false}) {
@@ -254,6 +524,7 @@ class _HomePageState extends State<HomePage> {
 
                     // EduMentor AI Section
                     GestureDetector(
+                      key: eduMentorAIKey,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -303,6 +574,7 @@ class _HomePageState extends State<HomePage> {
 
                     // Course Material Section
                     GestureDetector(
+                      key: courseMaterialKey,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -463,7 +735,7 @@ class MiraiDropDownItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(
-          vertical: propHeight(10), horizontal: propWidth(15)),
+          vertical: propHeight(4), horizontal: propWidth(10)),
       child: Text(
         item,
         style: TextStyle(

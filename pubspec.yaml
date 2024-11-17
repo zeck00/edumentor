@@ -26,6 +26,7 @@ dependencies:
   confetti: ^0.8.0
   another_flushbar: ^1.12.30
   fl_chart: ^0.69.0
+  tutorial_coach_mark: ^1.2.12
 
 dev_dependencies:
   flutter_test:
