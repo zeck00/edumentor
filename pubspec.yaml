@@ -27,6 +27,7 @@ dependencies:
   another_flushbar: ^1.12.30
   fl_chart: ^0.69.0
   tutorial_coach_mark: ^1.2.12
+  smooth_page_indicator: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -40,6 +41,9 @@ flutter:
   assets:
     - assets/
     - assets/PDFs/
+    - assets/images/onboarding_questions.png
+    - assets/images/onboarding_progress.png
+    - assets/images/onboarding_feedback.png
   
 
 flutter_icons:

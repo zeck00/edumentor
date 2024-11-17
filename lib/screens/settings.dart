@@ -96,10 +96,51 @@ class SettingsPage extends StatelessWidget {
                 },
               ),
               _settingsOption(
-                label: 'Account Settings',
-                icon: Icons.account_circle_rounded,
-                onTap: () {
-                  // Navigate to Account Settings screen
+                label: 'Logout',
+                icon: Icons.logout_rounded,
+                onTap: () async {
+                  // Show confirmation dialog
+                  bool? confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text(
+                          'Confirm Logout',
+                          style: FontStyles.sub.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Text(
+                          'Are you sure you want to logout?',
+                          style: FontStyles.sub,
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: Text(
+                              'Cancel',
+                              style: FontStyles.sub.copyWith(
+                                color: AppColors.black,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: Text(
+                              'Logout',
+                              style: FontStyles.sub.copyWith(
+                                color: AppColors.green,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (confirm == true) {
+                    // Handle logout
+                  }
                 },
               ),
               _settingsOption(

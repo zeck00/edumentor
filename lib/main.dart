@@ -1,15 +1,31 @@
 import 'package:edumentor/screens/home.dart';
 import 'package:edumentor/screens/login.dart';
+import 'package:edumentor/screens/onboarding.dart';
 import 'package:edumentor/services/auth_service.dart';
 import 'package:edumentor/asset-class/colors.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final bool shouldShowOnboarding = await OnboardingScreen.shouldShow();
+  final bool isLoggedIn = await AuthService.isLoggedIn();
+
+  Widget initialScreen;
+  if (shouldShowOnboarding) {
+    initialScreen = const OnboardingScreen();
+  } else if (isLoggedIn) {
+    initialScreen = const HomePage();
+  } else {
+    initialScreen = const LoginScreen();
+  }
+
+  runApp(MainApp(initialScreen: initialScreen));
 }
 
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+  final Widget initialScreen;
+  const MainApp({super.key, required this.initialScreen});
 
   @override
   Widget build(BuildContext context) {
@@ -68,22 +84,7 @@ class MainApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: FutureBuilder<bool>(
-        future: AuthService.isLoggedIn(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.green,
-                ),
-              ),
-            );
-          }
-
-          return snapshot.data == true ? const HomePage() : const LoginScreen();
-        },
-      ),
+      home: initialScreen,
     );
   }
 }
