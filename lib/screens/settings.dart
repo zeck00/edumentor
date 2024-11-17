@@ -90,69 +90,7 @@ class SettingsPage extends StatelessWidget {
               // Settings Options Section
               Text("General", style: FontStyles.hometitle),
               SizedBox(height: propHeight(20)),
-              _settingsOption(
-                label: 'Notifications',
-                icon: Icons.notifications_on_rounded,
-                onTap: () {
-                  // Navigate to Notifications Settings
-                },
-              ),
-              _settingsOption(
-                label: 'Logout',
-                icon: Icons.logout_rounded,
-                onTap: () async {
-                  // Show confirmation dialog
-                  bool? confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: Text(
-                          'Confirm Logout',
-                          style: FontStyles.sub.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        content: Text(
-                          'Are you sure you want to logout?',
-                          style: FontStyles.sub,
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: Text(
-                              'Cancel',
-                              style: FontStyles.sub.copyWith(
-                                color: AppColors.black,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: Text(
-                              'Logout',
-                              style: FontStyles.sub.copyWith(
-                                color: AppColors.green,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
 
-                  if (confirm == true) {
-                    await AuthService.logout();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const LoginScreen()),
-                        (route) => false,
-                      );
-                    }
-                  }
-                },
-              ),
               _settingsOption(
                 label: 'Language',
                 icon: Icons.language_rounded,
@@ -180,6 +118,142 @@ class SettingsPage extends StatelessWidget {
               // Legal and Privacy Section
               Text("Legal & Privacy", style: FontStyles.hometitle),
               SizedBox(height: propHeight(20)),
+              _settingsOption(
+                label: 'Logout',
+                icon: Icons.logout_rounded,
+                color: AppColors.red,
+                onTap: () async {
+                  // Show enhanced confirmation dialog
+                  bool? confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(propWidth(20)),
+                        ),
+                        elevation: 0,
+                        backgroundColor: Colors.transparent,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: propWidth(20),
+                            vertical: propHeight(20),
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            shape: BoxShape.rectangle,
+                            borderRadius: BorderRadius.circular(propWidth(20)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 10.0,
+                                offset: const Offset(0.0, 10.0),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(propWidth(16)),
+                                decoration: BoxDecoration(
+                                  color: AppColors.red.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.logout_rounded,
+                                  color: AppColors.red,
+                                  size: propWidth(32),
+                                ),
+                              ),
+                              SizedBox(height: propHeight(15)),
+                              Text(
+                                'Logout',
+                                style: FontStyles.sub.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: propWidth(20),
+                                ),
+                              ),
+                              SizedBox(height: propHeight(15)),
+                              Text(
+                                'Are you sure you want to logout?',
+                                textAlign: TextAlign.center,
+                                style: FontStyles.sub.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              SizedBox(height: propHeight(20)),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      style: TextButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: propHeight(12)),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              propWidth(10)),
+                                          side:
+                                              BorderSide(color: AppColors.red),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Cancel',
+                                        style: FontStyles.sub.copyWith(
+                                          color: AppColors.red,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: propWidth(10)),
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      style: TextButton.styleFrom(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: propHeight(12)),
+                                        backgroundColor: AppColors.red,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              propWidth(10)),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Logout',
+                                        style: FontStyles.sub.copyWith(
+                                          color: AppColors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+
+                  if (confirm == true) {
+                    await AuthService.logout();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                        (route) => false,
+                      );
+                    }
+                  }
+                },
+              ),
               _settingsOption(
                 label: 'Terms of Service',
                 icon: Icons.assignment_rounded,
@@ -218,6 +292,7 @@ class SettingsPage extends StatelessWidget {
     required String label,
     required IconData icon,
     required VoidCallback onTap,
+    Color color = AppColors.black,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -230,7 +305,7 @@ class SettingsPage extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(propWidth(15)),
-          border: Border.all(color: AppColors.black, width: propHeight(1)),
+          border: Border.all(color: color, width: propHeight(1)),
           boxShadow: [
             BoxShadow(
               color: Colors.black12,
@@ -244,13 +319,13 @@ class SettingsPage extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: propHeight(30), color: AppColors.black),
+                Icon(icon, size: propHeight(30), color: color),
                 SizedBox(width: propWidth(15)),
                 Text(
                   label,
                   style: FontStyles.sub.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.black,
+                    color: color,
                   ),
                 ),
               ],
@@ -258,7 +333,7 @@ class SettingsPage extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios,
               size: propHeight(20),
-              color: AppColors.black,
+              color: color,
             ),
           ],
         ),
