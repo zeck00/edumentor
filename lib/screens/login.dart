@@ -1,3 +1,4 @@
+import 'package:edumentor/screens/onboarding.dart';
 import 'package:edumentor/widgets/copyright_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:edumentor/asset-class/colors.dart';
@@ -117,21 +118,30 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(height: propHeight(40)),
-                Container(
-                  width: propWidth(150),
-                  height: propWidth(150),
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.gray,
-                        blurRadius: propWidth(10),
-                        spreadRadius: propHeight(5),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const OnboardingScreen()),
+                    );
+                  },
+                  child: Container(
+                    width: propWidth(150),
+                    height: propWidth(150),
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gray,
+                          blurRadius: propWidth(10),
+                          spreadRadius: propHeight(5),
+                        ),
+                      ],
+                      borderRadius: BorderRadius.circular(propWidth(25)),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/applogo.png'),
+                        fit: BoxFit.cover,
                       ),
-                    ],
-                    borderRadius: BorderRadius.circular(propWidth(25)),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/applogo.png'),
-                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
